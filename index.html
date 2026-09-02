@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>होटल सुपर एडमिन पोर्टल</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans p-4 max-w-4xl mx-auto">
+
+  <header class="bg-indigo-700 text-white p-4 rounded-xl shadow-md mb-6 flex justify-between items-center">
+    <div>
+      <h1 class="text-xl font-bold">होटल कंट्रोल सेंटर</h1>
+      <p class="text-xs text-indigo-200">सप्लाई-चेन व रेस्टोरेंट मैनेजमेंट</p>
+    </div>
+    <span class="bg-green-500 text-white text-xs px-2 py-1 rounded-full">लाइव सिंक</span>
+  </header>
+
+  <!-- नया रेस्टोरेंट जोड़ें -->
+  <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
+    <h2 class="text-base font-bold mb-3 text-indigo-900 border-b pb-2">+ नया रेस्टोरेंट जोड़ें</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+      <div>
+        <label class="text-xs font-semibold text-gray-600">रेस्टोरेंट नाम</label>
+        <input id="restName" type="text" placeholder="उदा. श्री गणेश भोजनालय" class="w-full border p-2 rounded text-sm mt-1">
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-gray-600">स्टोर कोड (Unique ID)</label>
+        <input id="storeCode" type="text" placeholder="उदा. SGB-101" class="w-full border p-2 rounded text-sm mt-1 uppercase">
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-gray-600">टेबल संख्या</label>
+        <input id="totalTables" type="number" value="10" class="w-full border p-2 rounded text-sm mt-1">
+      </div>
+    </div>
+    <button onclick="createRestaurant()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded text-sm transition">
+      रजिस्टर करें और 6-अंकों का पिन जनरेट करें
+    </button>
+  </section>
+
+  <!-- रेस्टोरेंट लिस्ट व किल-स्विच -->
+  <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
+    <h2 class="text-base font-bold mb-3 text-indigo-900 border-b pb-2">सक्रिय रेस्टोरेंट्स व रिमोट स्विच</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-gray-50 text-gray-600 border-b">
+          <tr>
+            <th class="p-2">कोड / नाम</th>
+            <th class="p-2">मास्टर पिन</th>
+            <th class="p-2">टेबल्स</th>
+            <th class="p-2">ऐप स्टेटस</th>
+            <th class="p-2 text-right">रिमोट कंट्रोल</th>
+          </tr>
+        </thead>
+        <tbody id="restaurantTable" class="divide-y text-xs">
+          <tr><td colspan="5" class="text-center p-4 text-gray-400">लोड हो रहा है...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- राशन डिमांड व थोक सप्लाई सेक्शन -->
+  <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
+    <div class="flex justify-between items-center mb-3 border-b pb-2">
+      <h2 class="text-base font-bold text-indigo-900">कुक राशन मांग (थोक सप्लाई हेतु)</h2>
+      <button onclick="downloadRationPDF()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded font-medium">
+        📥 राशन PDF डाउनलोड
+      </button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-gray-50 text-gray-600 border-b">
+          <tr>
+            <th class="p-2">स्टोर कोड</th>
+            <th class="p-2">सामग्री</th>
+            <th class="p-2">मात्रा</th>
+            <th class="p-2">समय</th>
+          </tr>
+        </thead>
+        <tbody id="rationTable" class="divide-y text-xs">
+          <tr><td colspan="4" class="text-center p-4 text-gray-400">कोई डिमांड नहीं है</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <script>
+    const SUPABASE_URL = "https://hbewnquphiwvxaxittrl.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_HA1-PBV55kEZet2GG_IBdg_HjUzfOxf";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let allRationData = [];
+
+    async function loadData() {
+      // 1. Fetch Restaurants
+      const { data: rests, error: err1 } = await supabase.from('restaurants').select('*').order('created_at', { ascending: false });
+      const restTable = document.getElementById('restaurantTable');
+      if (rests && rests.length > 0) {
+        restTable.innerHTML = rests.map(r => `
+          <tr class="hover:bg-gray-50">
+            <td class="p-2 font-semibold">
+              <span class="text-indigo-600">[${r.store_code}]</span><br>${r.name}
+            </td>
+            <td class="p-2 font-mono text-amber-600 font-bold text-sm">${r.master_pin}</td>
+            <td class="p-2">${r.total_tables}</td>
+            <td class="p-2">
+              <span class="${r.is_active ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'} px-2 py-0.5 rounded font-semibold">
+                ${r.is_active ? 'चालू' : 'ब्लॉक'}
+              </span>
+            </td>
+            <td class="p-2 text-right">
+              <button onclick="toggleSwitch('${r.id}', ${!r.is_active})" class="${r.is_active ? 'bg-red-500 hover:bg-red-600' : 'bg-green-600 hover:bg-green-700'} text-white px-2 py-1 rounded text-xs">
+                ${r.is_active ? 'ब्लॉक करें' : 'सक्रिय करें'}
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      } else {
+        restTable.innerHTML = `<tr><td colspan="5" class="text-center p-3 text-gray-400">कोई रेस्टोरेंट नहीं मिला</td></tr>`;
+      }
+
+      // 2. Fetch Ration Demands
+      const { data: rations, error: err2 } = await supabase.from('ration_demands').select('*').order('created_at', { ascending: false });
+      const ratTable = document.getElementById('rationTable');
+      if (rations && rations.length > 0) {
+        allRationData = rations;
+        ratTable.innerHTML = rations.map(rt => `
+          <tr class="hover:bg-gray-50">
+            <td class="p-2 font-semibold text-indigo-600">${rt.store_code}</td>
+            <td class="p-2 font-medium">${rt.item_name}</td>
+            <td class="p-2 font-bold text-gray-700">${rt.quantity}</td>
+            <td class="p-2 text-gray-400">${new Date(rt.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    async function createRestaurant() {
+      const name = document.getElementById('restName').value.trim();
+      const code = document.getElementById('storeCode').value.trim().toUpperCase();
+      const tables = parseInt(document.getElementById('totalTables').value) || 10;
+      const pin = Math.floor(100000 + Math.random() * 900000).toString(); // Auto 6-digit PIN
+
+      if (!name || !code) {
+        alert("कृपया रेस्टोरेंट का नाम और स्टोर कोड दर्ज करें!");
+        return;
+      }
+
+      const { error } = await supabase.from('restaurants').insert([
+        { store_code: code, name: name, master_pin: pin, total_tables: tables, is_active: true }
+      ]);
+
+      if (error) {
+        alert("त्रुटि: " + error.message);
+      } else {
+        alert(`रेस्टोरेंट सफलतापूर्वक दर्ज!\nमालिक को यह पिन दें: ${pin}`);
+        document.getElementById('restName').value = '';
+        document.getElementById('storeCode').value = '';
+        loadData();
+      }
+    }
+
+    async function toggleSwitch(id, newStatus) {
+      const { error } = await supabase.from('restaurants').update({ is_active: newStatus }).eq('id', id);
+      if (!error) loadData();
+    }
+
+    function downloadRationPDF() {
+      if (allRationData.length === 0) {
+        alert("डाउनलोड के लिए कोई राशन डेटा मौजूद नहीं है!");
+        return;
+      }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text("होटल राशन डिमांड शीट (थोक सप्लाई)", 14, 15);
+      doc.setFontSize(10);
+      doc.text(`दिनांक: ${new Date().toLocaleDateString()}`, 14, 22);
+
+      const tableRows = allRationData.map(r => [
+        r.store_code,
+        r.item_name,
+        r.quantity,
+        new Date(r.created_at).toLocaleTimeString()
+      ]);
+
+      doc.autoTable({
+        head: [['स्टोर कोड', 'सामग्री नाम', 'मात्रा (Qty)', 'समय']],
+        body: tableRows,
+        startY: 28,
+      });
+
+      doc.save(`Ration_Indent_${new Date().toISOString().slice(0,10)}.pdf`);
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
