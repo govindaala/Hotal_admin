@@ -14,9 +14,10 @@
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
         th { background: #0f172a; color: white; }
-        .btn { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; font-size: 14px; }
+        .btn { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; font-size: 13px; }
         .btn-green { background: #10b981; }
         .btn-red { background: #ef4444; }
+        .btn-dark-red { background: #991b1b; }
         .btn-blue { background: #3b82f6; }
         .btn-small { padding: 4px 8px; font-size: 12px; margin-left: 6px; background: #f59e0b; border-radius: 4px; }
         #statusAlert { display: none; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; font-size: 14px; }
@@ -50,7 +51,7 @@
                 <label>कुल टेबल्स:</label>
                 <input type="number" id="totalTables" placeholder="उदा. 10" value="10">
             </div>
-            <button class="btn btn-green" id="submitBtn" onclick="registerHotel()">होटल रजिस्टर करें</button>
+            <button class="btn btn-green" id="submitBtn" onclick="registerHotel()" style="padding: 12px 20px; font-size: 15px;">होटल रजिस्टर करें</button>
         </div>
 
         <!-- 2. रजिस्टर्ड होटल लिस्ट -->
@@ -65,7 +66,7 @@
                             <th>टेबल्स</th>
                             <th>मास्टर पिन</th>
                             <th>स्टेटस</th>
-                            <th>एक्शन</th>
+                            <th>एक्शन (ब्लॉक / डिलीट)</th>
                             <th>राशन मांग</th>
                         </tr>
                     </thead>
@@ -140,7 +141,7 @@
             const tables = document.getElementById('totalTables').value.trim();
 
             if (!name || !code || !pin || !tables) {
-                alert("कृपया सभी 4 फ़ील्ड्स (नाम, कोड, पिन, टेबल) भरें!");
+                alert("कृपया सभी 4 फ़ील्ड्स भरें!");
                 return;
             }
 
@@ -149,7 +150,6 @@
             btn.disabled = true;
 
             try {
-                // PostgREST Upsert (अगर स्टोर कोड पहले से है तो अपडेट करेगा, वरना नया बनाएगा)
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?on_conflict=store_code`, {
                     method: 'POST',
                     headers: {
@@ -216,7 +216,10 @@
                         <td style="color: ${r.is_active ? 'green' : 'red'}; font-weight: bold;">${r.is_active ? 'चालू' : 'ब्लॉक'}</td>
                         <td>
                             <button class="btn ${r.is_active ? 'btn-red' : 'btn-green'}" onclick="toggleStatus('${r.store_code}', ${r.is_active})">
-                                ${r.is_active ? 'ब्लॉक करें' : 'चालू करें'}
+                                ${r.is_active ? 'ब्लॉक' : 'चालू'}
+                            </button>
+                            <button class="btn btn-dark-red" style="margin-left: 6px;" onclick="deleteHotel('${r.store_code}', '${r.name}')">
+                                🗑️ डिलीट
                             </button>
                         </td>
                         <td>
@@ -227,6 +230,39 @@
                 });
             } catch (err) {
                 tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">लोड एरर: ${err.message}</td></tr>`;
+            }
+        }
+
+        async function deleteHotel(storeCode, hotelName) {
+            const check = confirm(`क्या आप सचमुच होटल "${hotelName}" (कोड: ${storeCode}) को हमेशा के लिए डिलीट करना चाहते हैं?\n\nचेतावनी: इससे होटल का सारा स्टाफ और राशन डेटा भी स्थायी रूप से हट जाएगा!`);
+            if (!check) return;
+
+            try {
+                // 1. होटल के स्टाफ को डिलीट करें
+                await fetch(`${SUPABASE_URL}/rest/v1/hotel_staff?store_code=eq.${storeCode}`, {
+                    method: 'DELETE',
+                    headers: apiHeaders
+                });
+
+                // 2. होटल की राशन मांग को डिलीट करें
+                await fetch(`${SUPABASE_URL}/rest/v1/ration_demands?store_code=eq.${storeCode}`, {
+                    method: 'DELETE',
+                    headers: apiHeaders
+                });
+
+                // 3. मुख्य होटल रिकॉर्ड को डिलीट करें
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?store_code=eq.${storeCode}`, {
+                    method: 'DELETE',
+                    headers: apiHeaders
+                });
+
+                if (!res.ok) throw new Error('होटल डिलीट नहीं हो सका');
+
+                showMessage(`होटल [${storeCode}] और उसका सारा डेटा डिलीट कर दिया गया!`);
+                await loadRestaurants();
+                await loadAllRationDemands();
+            } catch (err) {
+                showMessage("डिलीट एरर: " + err.message, true);
             }
         }
 
