@@ -1,239 +1,153 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>होटल सुपर एडमिन पोर्टल</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <meta charset="UTF-8">
+    <title>सुपर एडमिन - होटल मैनेजमेंट</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #0f172a; color: white; }
+        .btn { padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
+        .btn-green { background: #10b981; }
+        .btn-red { background: #ef4444; }
+        .btn-blue { background: #3b82f6; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 10% auto; padding: 20px; width: 60%; border-radius: 10px; }
+        .close { float: right; font-size: 24px; cursor: pointer; color: red; }
+    </style>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans p-4 max-w-4xl mx-auto">
+<body>
+    <div class="container">
+        <h1 style="text-align: center; color: #0f172a;">सुपर एडमिन कंट्रोल पैनल</h1>
+        
+        <!-- 1. रेस्टोरेंट लिस्ट और कंट्रोल -->
+        <div class="card">
+            <h2>🏨 सभी रेस्टोरेंट / होटल</h2>
+            <table id="restaurantTable">
+                <thead>
+                    <tr>
+                        <th>स्टोर कोड</th>
+                        <th>होटल का नाम</th>
+                        <th>स्टेटस</th>
+                        <th>एक्शन (ब्लॉक/चालू)</th>
+                        <th>राशन देखें</th>
+                    </tr>
+                </thead>
+                <tbody id="restaurantBody"></tbody>
+            </table>
+        </div>
 
-  <header class="bg-indigo-700 text-white p-4 rounded-xl shadow-md mb-6 flex justify-between items-center">
-    <div>
-      <h1 class="text-xl font-bold">होटल कंट्रोल सेंटर</h1>
-      <p class="text-xs text-indigo-200">सप्लाई-चेन व रेस्टोरेंट मैनेजमेंट</p>
+        <!-- 2. कंबाइंड राशन लिस्ट (डेट फिल्टर के साथ) -->
+        <div class="card">
+            <h2>🛒 सभी होटलों की कुल राशन मांग</h2>
+            <label>तारीख चुनें: </label>
+            <input type="date" id="dateFilter" onchange="loadAllRationDemands()">
+            <table id="allRationTable">
+                <thead>
+                    <tr>
+                        <th>तारीख</th>
+                        <th>स्टोर कोड</th>
+                        <th>सामग्री</th>
+                        <th>मात्रा</th>
+                    </tr>
+                </thead>
+                <tbody id="allRationBody"></tbody>
+            </table>
+        </div>
     </div>
-    <span id="syncBadge" class="bg-green-500 text-white text-xs px-2 py-1 rounded-full">लाइव सिंक</span>
-  </header>
 
-  <!-- नया रेस्टोरेंट जोड़ें -->
-  <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
-    <h2 class="text-base font-bold mb-3 text-indigo-900 border-b pb-2">+ नया रेस्टोरेंट जोड़ें</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-      <div>
-        <label class="text-xs font-semibold text-gray-600">रेस्टोरेंट नाम</label>
-        <input id="restName" type="text" placeholder="उदा. Ram Hotel" class="w-full border p-2 rounded text-sm mt-1">
-      </div>
-      <div>
-        <label class="text-xs font-semibold text-gray-600">स्टोर कोड (Unique ID)</label>
-        <input id="storeCode" type="text" placeholder="उदा. 101" class="w-full border p-2 rounded text-sm mt-1 uppercase">
-      </div>
-      <div>
-        <label class="text-xs font-semibold text-gray-600">टेबल संख्या</label>
-        <input id="totalTables" type="number" value="10" class="w-full border p-2 rounded text-sm mt-1">
-      </div>
+    <!-- मॉडल (पॉपअप) किसी एक होटल का राशन देखने के लिए -->
+    <div id="rationModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">राशन लिस्ट</h2>
+            <table id="modalTable">
+                <thead>
+                    <tr><th>तारीख</th><th>सामग्री</th><th>मात्रा</th></tr>
+                </thead>
+                <tbody id="modalBody"></tbody>
+            </table>
+        </div>
     </div>
-    <button id="submitBtn" onclick="createRestaurant()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded text-sm transition">
-      रजिस्टर करें और 6-अंकों का पिन जनरेट करें
-    </button>
-  </section>
 
-  <!-- रेस्टोरेंट लिस्ट व किल-स्विच -->
-  <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
-    <h2 class="text-base font-bold mb-3 text-indigo-900 border-b pb-2">सक्रिय रेस्टोरेंट्स व रिमोट स्विच</h2>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm">
-        <thead class="bg-gray-50 text-gray-600 border-b">
-          <tr>
-            <th class="p-2">कोड / नाम</th>
-            <th class="p-2">मास्टर पिन</th>
-            <th class="p-2">टेबल्स</th>
-            <th class="p-2">ऐप स्टेटस</th>
-            <th class="p-2 text-right">रिमोट कंट्रोल</th>
-          </tr>
-        </thead>
-        <tbody id="restaurantTable" class="divide-y text-xs">
-          <tr><td colspan="5" class="text-center p-4 text-gray-400">डेटा चेक हो रहा है...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+    <script>
+        const supabaseUrl = 'https://hbewnquphiwvxaxittrl.supabase.co';
+        const supabaseKey = 'sb_publishable_HA1-PBV55kEZet2GG_IBdg_HjUzfOxf'; // अपना पब्लिक की डालें
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-  <!-- राशन मांग व थोक सप्लाई सेक्शन -->
-  <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
-    <div class="flex justify-between items-center mb-3 border-b pb-2">
-      <h2 class="text-base font-bold text-indigo-900">कुक राशन मांग (थोक सप्लाई हेतु)</h2>
-      <button onclick="downloadRationPDF()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded font-medium">
-        📥 राशन PDF डाउनलोड
-      </button>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm">
-        <thead class="bg-gray-50 text-gray-600 border-b">
-          <tr>
-            <th class="p-2">स्टोर कोड</th>
-            <th class="p-2">सामग्री</th>
-            <th class="p-2">मात्रा</th>
-            <th class="p-2">समय</th>
-          </tr>
-        </thead>
-        <tbody id="rationTable" class="divide-y text-xs">
-          <tr><td colspan="4" class="text-center p-4 text-gray-400">कोई मांग नहीं है</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <script>
-    const SUPABASE_URL = "https://hbewnquphiwvxaxittrl.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_HA1-PBV55kEZet2GG_IBdg_HjUzfOxf";
-    
-    const headers = {
-      "apikey": SUPABASE_KEY,
-      "Authorization": "Bearer " + SUPABASE_KEY,
-      "Content-Type": "application/json",
-      "Prefer": "return=representation"
-    };
-
-    let allRationData = [];
-
-    async function loadData() {
-      const restTable = document.getElementById('restaurantTable');
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?select=*&order=created_at.desc`, { headers });
-        if (!res.ok) throw new Error("डेटाबेस कनेक्शन एरर: " + res.statusText);
-        const rests = await res.json();
-
-        if (rests && rests.length > 0) {
-          restTable.innerHTML = rests.map(r => `
-            <tr class="hover:bg-gray-50">
-              <td class="p-2 font-semibold">
-                <span class="text-indigo-600">[${r.store_code}]</span><br>${r.name}
-              </td>
-              <td class="p-2 font-mono text-amber-600 font-bold text-sm">${r.master_pin}</td>
-              <td class="p-2">${r.total_tables}</td>
-              <td class="p-2">
-                <span class="${r.is_active ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'} px-2 py-0.5 rounded font-semibold">
-                  ${r.is_active ? 'चालू' : 'ब्लॉक'}
-                </span>
-              </td>
-              <td class="p-2 text-right">
-                <button onclick="toggleSwitch('${r.id}', ${!r.is_active})" class="${r.is_active ? 'bg-red-500 hover:bg-red-600' : 'bg-green-600 hover:bg-green-700'} text-white px-2 py-1 rounded text-xs">
-                  ${r.is_active ? 'ब्लॉक करें' : 'सक्रिय करें'}
-                </button>
-              </td>
-            </tr>
-          `).join('');
-        } else {
-          restTable.innerHTML = `<tr><td colspan="5" class="text-center p-3 text-gray-500">अभी कोई रेस्टोरेंट दर्ज नहीं है। ऊपर फॉर्म भरकर जोड़ें।</td></tr>`;
-        }
-      } catch (err) {
-        restTable.innerHTML = `<tr><td colspan="5" class="text-center p-3 text-red-500 font-semibold">${err.message}</td></tr>`;
-      }
-
-      // Fetch Rations
-      try {
-        const res2 = await fetch(`${SUPABASE_URL}/rest/v1/ration_demands?select=*&order=created_at.desc`, { headers });
-        const rations = await res2.json();
-        const ratTable = document.getElementById('rationTable');
-        if (rations && rations.length > 0) {
-          allRationData = rations;
-          ratTable.innerHTML = rations.map(rt => `
-            <tr class="hover:bg-gray-50">
-              <td class="p-2 font-semibold text-indigo-600">${rt.store_code}</td>
-              <td class="p-2 font-medium">${rt.item_name}</td>
-              <td class="p-2 font-bold text-gray-700">${rt.quantity}</td>
-              <td class="p-2 text-gray-400">${new Date(rt.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
-            </tr>
-          `).join('');
-        }
-      } catch (_) {}
-    }
-
-    async function createRestaurant() {
-      const name = document.getElementById('restName').value.trim();
-      const code = document.getElementById('storeCode').value.trim().toUpperCase();
-      const tables = parseInt(document.getElementById('totalTables').value) || 10;
-      const pin = Math.floor(100000 + Math.random() * 900000).toString();
-
-      if (!name || !code) {
-        alert("कृपया रेस्टोरेंट का नाम और स्टोर कोड दोनों दर्ज करें!");
-        return;
-      }
-
-      const btn = document.getElementById('submitBtn');
-      btn.innerText = "सेव हो रहा है...";
-      btn.disabled = true;
-
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants`, {
-          method: "POST",
-          headers: headers,
-          body: JSON.stringify([{
-            store_code: code,
-            name: name,
-            master_pin: pin,
-            total_tables: tables,
-            is_active: true
-          }])
-        });
-
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.message || "डेटा सेव नहीं हो सका");
+        async function loadRestaurants() {
+            const { data, error } = await supabase.from('restaurants').select('*');
+            if (error) return;
+            const tbody = document.getElementById('restaurantBody');
+            tbody.innerHTML = '';
+            data.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${r.store_code}</td>
+                    <td>${r.name}</td>
+                    <td style="color: ${r.is_active ? 'green' : 'red'}"><b>${r.is_active ? 'चालू' : 'ब्लॉक'}</b></td>
+                    <td>
+                        <button class="btn ${r.is_active ? 'btn-red' : 'btn-green'}" onclick="toggleStatus('${r.store_code}', ${r.is_active})">
+                            ${r.is_active ? 'ब्लॉक करें' : 'चालू करें'}
+                        </button>
+                    </td>
+                    <td>
+                        <button class="btn btn-blue" onclick="viewSingleRestaurantRation('${r.store_code}')">राशन देखें</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
 
-        alert(`सफलतापूर्वक दर्ज!\nरेस्टोरेंट: ${name}\nमास्टर पिन: ${pin}`);
-        document.getElementById('restName').value = '';
-        document.getElementById('storeCode').value = '';
-        loadData();
-      } catch (e) {
-        alert("एरर: " + e.message);
-      } finally {
-        btn.innerText = "रजिस्टर करें और 6-अंकों का पिन जनरेट करें";
-        btn.disabled = false;
-      }
-    }
+        async function toggleStatus(code, currentStatus) {
+            await supabase.from('restaurants').update({ is_active: !currentStatus }).eq('store_code', code);
+            loadRestaurants();
+        }
 
-    async function toggleSwitch(id, newStatus) {
-      await fetch(`${SUPABASE_URL}/rest/v1/restaurants?id=eq.${id}`, {
-        method: "PATCH",
-        headers: headers,
-        body: JSON.stringify({ is_active: newStatus })
-      });
-      loadData();
-    }
+        async function viewSingleRestaurantRation(code) {
+            document.getElementById('modalTitle').innerText = `स्टोर ${code} की राशन मांग`;
+            const { data, error } = await supabase.from('ration_demands').select('*').eq('store_code', code).order('created_at', { ascending: false });
+            const tbody = document.getElementById('modalBody');
+            tbody.innerHTML = '';
+            if (data) {
+                data.forEach(d => {
+                    const date = new Date(d.created_at).toLocaleDateString('en-GB');
+                    tbody.innerHTML += `<tr><td>${date}</td><td>${d.item_name}</td><td>${d.quantity}</td></tr>`;
+                });
+            }
+            document.getElementById('rationModal').style.display = 'block';
+        }
 
-    function downloadRationPDF() {
-      if (allRationData.length === 0) {
-        alert("डाउनलोड के लिए कोई राशन डेटा मौजूद नहीं है!");
-        return;
-      }
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      doc.text("होटल राशन डिमांड शीट (थोक सप्लाई)", 14, 15);
-      doc.setFontSize(10);
-      doc.text(`दिनांक: ${new Date().toLocaleDateString()}`, 14, 22);
+        function closeModal() { document.getElementById('rationModal').style.display = 'none'; }
 
-      const tableRows = allRationData.map(r => [
-        r.store_code,
-        r.item_name,
-        r.quantity,
-        new Date(r.created_at).toLocaleTimeString()
-      ]);
+        async function loadAllRationDemands() {
+            let query = supabase.from('ration_demands').select('*').order('created_at', { ascending: false });
+            
+            const filterDate = document.getElementById('dateFilter').value;
+            if (filterDate) {
+                query = query.gte('created_at', `${filterDate}T00:00:00`).lte('created_at', `${filterDate}T23:59:59`);
+            }
 
-      doc.autoTable({
-        head: [['स्टोर कोड', 'सामग्री नाम', 'मात्रा (Qty)', 'समय']],
-        body: tableRows,
-        startY: 28,
-      });
+            const { data, error } = await query;
+            const tbody = document.getElementById('allRationBody');
+            tbody.innerHTML = '';
+            if (data) {
+                data.forEach(d => {
+                    const date = new Date(d.created_at).toLocaleDateString('en-GB');
+                    tbody.innerHTML += `<tr><td>${date}</td><td><b>${d.store_code}</b></td><td>${d.item_name}</td><td>${d.quantity}</td></tr>`;
+                });
+            }
+        }
 
-      doc.save(`Ration_Demand_${new Date().toISOString().slice(0,10)}.pdf`);
-    }
-
-    loadData();
-  </script>
+        window.onload = () => {
+            document.getElementById('dateFilter').valueAsDate = new Date();
+            loadRestaurants();
+            loadAllRationDemands();
+        };
+    </script>
 </body>
 </html>
