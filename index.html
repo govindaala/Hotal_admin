@@ -2,93 +2,104 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>सुपर एडमिन - होटल मैनेजमेंट</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 16px; }
         .container { max-width: 1200px; margin: 0 auto; }
         .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
-        input { padding: 10px; width: 100%; box-sizing: border-box; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; }
+        label { font-weight: 600; color: #1e293b; }
+        input { padding: 10px; width: 100%; box-sizing: border-box; margin-top: 5px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
         th { background: #0f172a; color: white; }
-        .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; font-size: 16px; }
+        .btn { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; font-size: 14px; }
         .btn-green { background: #10b981; }
         .btn-red { background: #ef4444; }
         .btn-blue { background: #3b82f6; }
-        .btn-small { padding: 5px 10px; font-size: 12px; margin-left: 10px; background: #f59e0b; } /* एडिट बटन के लिए पीला रंग */
+        .btn-small { padding: 4px 8px; font-size: 12px; margin-left: 6px; background: #f59e0b; border-radius: 4px; }
+        #statusAlert { display: none; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; font-size: 14px; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
-        .modal-content { background: white; margin: 5% auto; padding: 20px; width: 80%; max-height: 80vh; overflow-y: auto; border-radius: 10px; }
-        .close { float: right; font-size: 28px; cursor: pointer; color: red; font-weight: bold; }
+        .modal-content { background: white; margin: 8% auto; padding: 20px; width: 85%; max-width: 700px; max-height: 80vh; overflow-y: auto; border-radius: 10px; }
+        .close { float: right; font-size: 26px; cursor: pointer; color: red; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 style="text-align: center; color: #0f172a;">सुपर एडमिन कंट्रोल पैनल</h1>
+        <h1 style="text-align: center; color: #0f172a; margin-bottom: 20px;">सुपर एडमिन कंट्रोल पैनल</h1>
+
+        <div id="statusAlert"></div>
         
         <!-- 1. नया होटल रजिस्ट्रेशन फॉर्म -->
         <div class="card">
-            <h2>🏨 नया होटल रजिस्टर करें</h2>
+            <h2>🏨 नया होटल रजिस्टर / अपडेट करें</h2>
             <div class="form-group">
                 <label>होटल का नाम:</label>
                 <input type="text" id="hotelName" placeholder="उदा. राजपूताना भोजनालय">
             </div>
             <div class="form-group">
-                <label>स्टोर कोड (यूनिक):</label>
-                <input type="text" id="storeCode" placeholder="उदा. 101">
+                <label>स्टोर कोड:</label>
+                <input type="text" id="storeCode" placeholder="उदा. 111">
             </div>
             <div class="form-group">
-                <label>मास्टर पिन (6 अंक):</label>
-                <input type="password" id="masterPin" placeholder="उदा. 123456">
+                <label>मास्टर पिन (4-6 अंक):</label>
+                <input type="text" id="masterPin" placeholder="उदा. 123456">
             </div>
             <div class="form-group">
                 <label>कुल टेबल्स:</label>
-                <input type="number" id="totalTables" placeholder="उदा. 10">
+                <input type="number" id="totalTables" placeholder="उदा. 10" value="10">
             </div>
             <button class="btn btn-green" id="submitBtn" onclick="registerHotel()">होटल रजिस्टर करें</button>
-            <p id="regMsg" style="font-weight: bold; margin-top: 10px;"></p>
         </div>
 
-        <!-- 2. रेस्टोरेंट लिस्ट और कंट्रोल -->
+        <!-- 2. रजिस्टर्ड होटल लिस्ट -->
         <div class="card">
             <h2>📋 सभी रजिस्टर्ड रेस्टोरेंट / होटल</h2>
-            <table id="restaurantTable">
-                <thead>
-                    <tr>
-                        <th>स्टोर कोड</th>
-                        <th>होटल का नाम</th>
-                        <th>टेबल्स</th>
-                        <th>मास्टर पिन</th> <!-- नया कॉलम -->
-                        <th>स्टेटस</th>
-                        <th>एक्शन</th>
-                        <th>राशन देखें</th>
-                    </tr>
-                </thead>
-                <tbody id="restaurantBody"></tbody>
-            </table>
+            <div style="overflow-x: auto;">
+                <table id="restaurantTable">
+                    <thead>
+                        <tr>
+                            <th>स्टोर कोड</th>
+                            <th>होटल का नाम</th>
+                            <th>टेबल्स</th>
+                            <th>मास्टर पिन</th>
+                            <th>स्टेटस</th>
+                            <th>एक्शन</th>
+                            <th>राशन मांग</th>
+                        </tr>
+                    </thead>
+                    <tbody id="restaurantBody">
+                        <tr><td colspan="7" style="text-align: center; color: #64748b;">डेटा लोड हो रहा है...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <!-- 3. कंबाइंड राशन लिस्ट -->
+        <!-- 3. कंबाइंड राशन मांग लिस्ट -->
         <div class="card">
             <h2>🛒 सभी होटलों की कुल राशन मांग</h2>
-            <label style="font-weight: bold;">तारीख चुनें: </label>
-            <input type="date" id="dateFilter" onchange="loadAllRationDemands()" style="width: 250px; display: inline-block;">
-            <table id="allRationTable">
-                <thead>
-                    <tr>
-                        <th>तारीख व समय</th>
-                        <th>स्टोर कोड</th>
-                        <th>सामग्री</th>
-                        <th>मात्रा</th>
-                    </tr>
-                </thead>
-                <tbody id="allRationBody"></tbody>
-            </table>
+            <label><b>तारीख चुनें: </b></label>
+            <input type="date" id="dateFilter" onchange="loadAllRationDemands()" style="width: 220px; display: inline-block; margin-bottom: 12px;">
+            <div style="overflow-x: auto;">
+                <table id="allRationTable">
+                    <thead>
+                        <tr>
+                            <th>तारीख व समय</th>
+                            <th>स्टोर कोड</th>
+                            <th>सामग्री</th>
+                            <th>मात्रा</th>
+                        </tr>
+                    </thead>
+                    <tbody id="allRationBody">
+                        <tr><td colspan="4" style="text-align: center; color: #64748b;">राशन मांग लोड हो रही है...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <!-- मॉडल (पॉपअप) -->
+    <!-- राशन पॉपअप मोडल -->
     <div id="rationModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
@@ -103,62 +114,90 @@
     </div>
 
     <script>
-        const supabaseUrl = 'https://hbewnquphiwvxaxittrl.supabase.co';
-        const supabaseKey = 'sb_publishable_HA1-PBV55kEZet2GG_IBdg_HjUzfOxf'; 
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        const SUPABASE_URL = 'https://hbewnquphiwvxaxittrl.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_HA1-PBV55kEZet2GG_IBdg_HjUzfOxf';
+
+        const apiHeaders = {
+            'apikey': SUPABASE_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_KEY,
+            'Content-Type': 'application/json'
+        };
+
+        function showMessage(text, isError = false) {
+            const alertBox = document.getElementById('statusAlert');
+            alertBox.style.display = 'block';
+            alertBox.style.background = isError ? '#fee2e2' : '#dcfce7';
+            alertBox.style.border = isError ? '1px solid #ef4444' : '1px solid #22c55e';
+            alertBox.style.color = isError ? '#b91c1c' : '#15803d';
+            alertBox.innerHTML = (isError ? '⚠️ ' : '✅ ') + text;
+            setTimeout(() => { alertBox.style.display = 'none'; }, 6000);
+        }
 
         async function registerHotel() {
+            const name = document.getElementById('hotelName').value.trim();
+            const code = document.getElementById('storeCode').value.trim().toUpperCase();
+            const pin = document.getElementById('masterPin').value.trim();
+            const tables = document.getElementById('totalTables').value.trim();
+
+            if (!name || !code || !pin || !tables) {
+                alert("कृपया सभी 4 फ़ील्ड्स (नाम, कोड, पिन, टेबल) भरें!");
+                return;
+            }
+
+            const btn = document.getElementById('submitBtn');
+            btn.innerText = "सेव हो रहा है...";
+            btn.disabled = true;
+
             try {
-                const name = document.getElementById('hotelName').value;
-                const code = document.getElementById('storeCode').value;
-                const pin = document.getElementById('masterPin').value;
-                const tables = document.getElementById('totalTables').value;
+                // PostgREST Upsert (अगर स्टोर कोड पहले से है तो अपडेट करेगा, वरना नया बनाएगा)
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?on_conflict=store_code`, {
+                    method: 'POST',
+                    headers: {
+                        ...apiHeaders,
+                        'Prefer': 'resolution=merge-duplicates,return=representation'
+                    },
+                    body: JSON.stringify([{
+                        store_code: code,
+                        name: name,
+                        master_pin: pin,
+                        total_tables: parseInt(tables),
+                        is_active: true
+                    }])
+                });
 
-                if(!name || !code || !pin || !tables) {
-                    alert("कृपया रजिस्ट्रेशन के लिए सभी जानकारी (नाम, कोड, पिन, टेबल) भरें!");
-                    return;
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.message || 'डेटा सेव नहीं हुआ');
                 }
 
-                const btn = document.getElementById('submitBtn');
-                btn.innerText = "सेव हो रहा है...";
-                btn.disabled = true;
-
-                const { data, error } = await supabase.from('restaurants').insert([
-                    { name: name, store_code: code, master_pin: pin, total_tables: parseInt(tables), is_active: true }
-                ]);
-
-                if (error) {
-                    alert("डेटाबेस एरर: \n" + error.message);
-                    document.getElementById('regMsg').style.color = 'red';
-                    document.getElementById('regMsg').innerText = "एरर: " + error.message;
-                } else {
-                    document.getElementById('regMsg').style.color = 'green';
-                    document.getElementById('regMsg').innerText = "✅ होटल सफलतापूर्वक रजिस्टर हो गया!";
-                    document.getElementById('hotelName').value = '';
-                    document.getElementById('storeCode').value = '';
-                    document.getElementById('masterPin').value = '';
-                    document.getElementById('totalTables').value = '';
-                    await loadRestaurants(); 
-                }
+                showMessage(`होटल [${code}] सफलतापूर्वक रजिस्टर/अपडेट हो गया!`);
+                document.getElementById('hotelName').value = '';
+                document.getElementById('storeCode').value = '';
+                document.getElementById('masterPin').value = '';
+                await loadRestaurants();
+            } catch (err) {
+                showMessage("एरर: " + err.message, true);
+            } finally {
                 btn.innerText = "होटल रजिस्टर करें";
                 btn.disabled = false;
-            } catch (err) {
-                alert("सिस्टम एरर: " + err.message);
             }
         }
 
         async function loadRestaurants() {
+            const tbody = document.getElementById('restaurantBody');
             try {
-                const { data, error } = await supabase.from('restaurants').select('*');
-                
-                if (error) {
-                    alert("रेस्टोरेंट लिस्ट लोड करने में एरर: \n" + error.message);
-                    return;
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?select=*&order=created_at.desc`, {
+                    headers: apiHeaders
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.message || 'डेटा लोड नहीं हुआ');
                 }
-                
-                const tbody = document.getElementById('restaurantBody');
+
+                const data = await res.json();
                 tbody.innerHTML = '';
-                
+
                 if (!data || data.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">अभी कोई होटल रजिस्टर नहीं है।</td></tr>';
                     return;
@@ -169,12 +208,12 @@
                     tr.innerHTML = `
                         <td><b>${r.store_code}</b></td>
                         <td>${r.name}</td>
-                        <td>${r.total_tables}</td>
+                        <td>${r.total_tables || 10}</td>
                         <td>
-                            <b>${r.master_pin}</b> 
+                            <b>${r.master_pin}</b>
                             <button class="btn btn-small" onclick="editMasterPin('${r.store_code}', '${r.master_pin}')">✏️ एडिट</button>
                         </td>
-                        <td style="color: ${r.is_active ? 'green' : 'red'}"><b>${r.is_active ? 'चालू' : 'ब्लॉक'}</b></td>
+                        <td style="color: ${r.is_active ? 'green' : 'red'}; font-weight: bold;">${r.is_active ? 'चालू' : 'ब्लॉक'}</td>
                         <td>
                             <button class="btn ${r.is_active ? 'btn-red' : 'btn-green'}" onclick="toggleStatus('${r.store_code}', ${r.is_active})">
                                 ${r.is_active ? 'ब्लॉक करें' : 'चालू करें'}
@@ -187,92 +226,94 @@
                     tbody.appendChild(tr);
                 });
             } catch (err) {
-                console.error(err);
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">लोड एरर: ${err.message}</td></tr>`;
             }
         }
 
-        // नया फ़ंक्शन: पिन एडिट करने के लिए
         async function editMasterPin(storeCode, currentPin) {
-            const newPin = prompt(`स्टोर कोड [${storeCode}] के लिए नया मास्टर पिन डालें:`, currentPin);
-            
-            // अगर यूज़र ने Cancel नहीं किया और पिन खाली नहीं है
-            if (newPin !== null && newPin.trim() !== '') {
-                if(newPin.trim().length < 4) {
-                    alert("पिन कम से कम 4 अंकों का होना चाहिए!");
-                    return;
-                }
-
-                const { error } = await supabase.from('restaurants').update({ master_pin: newPin.trim() }).eq('store_code', storeCode);
-                
-                if (error) {
-                    alert("पिन अपडेट करने में एरर: " + error.message);
-                } else {
-                    alert("✅ पिन सफलतापूर्वक बदल गया!");
-                    loadRestaurants(); // लिस्ट को रिफ्रेश करें
+            const newPin = prompt(`[${storeCode}] के लिए नया मास्टर पिन डालें:`, currentPin);
+            if (newPin && newPin.trim()) {
+                try {
+                    const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?store_code=eq.${storeCode}`, {
+                        method: 'PATCH',
+                        headers: apiHeaders,
+                        body: JSON.stringify({ master_pin: newPin.trim() })
+                    });
+                    if (!res.ok) throw new Error('पिन अपडेट विफल');
+                    showMessage(`स्टोर [${storeCode}] का पिन बदल गया!`);
+                    loadRestaurants();
+                } catch (e) {
+                    alert(e.message);
                 }
             }
         }
 
-        async function toggleStatus(code, currentStatus) {
-            const { error } = await supabase.from('restaurants').update({ is_active: !currentStatus }).eq('store_code', code);
-            if (error) {
-                alert("स्टेटस बदलने में एरर: " + error.message);
-            }
-            loadRestaurants();
-        }
-
-        async function viewSingleRestaurantRation(code) {
-            document.getElementById('modalTitle').innerText = `स्टोर ${code} की राशन मांग`;
-            const { data, error } = await supabase.from('ration_demands').select('*').eq('store_code', code).order('created_at', { ascending: false });
-            
-            const tbody = document.getElementById('modalBody');
-            tbody.innerHTML = '';
-            
-            if (error) {
-                alert("राशन लिस्ट लाने में एरर: \n" + error.message);
-            } else if (data && data.length > 0) {
-                data.forEach(d => {
-                    const dateObj = new Date(d.created_at);
-                    const formattedDate = dateObj.toLocaleDateString('hi-IN') + " " + dateObj.toLocaleTimeString('hi-IN');
-                    tbody.innerHTML += `<tr><td>${formattedDate}</td><td>${d.item_name}</td><td>${d.quantity}</td></tr>`;
+        async function toggleStatus(storeCode, currentStatus) {
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?store_code=eq.${storeCode}`, {
+                    method: 'PATCH',
+                    headers: apiHeaders,
+                    body: JSON.stringify({ is_active: !currentStatus })
                 });
-            } else {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">कोई राशन मांग नहीं मिली।</td></tr>';
+                if (!res.ok) throw new Error('स्टेटस अपडेट विफल');
+                loadRestaurants();
+            } catch (e) {
+                alert(e.message);
             }
-            document.getElementById('rationModal').style.display = 'block';
         }
 
-        function closeModal() { 
-            document.getElementById('rationModal').style.display = 'none'; 
+        async function viewSingleRestaurantRation(storeCode) {
+            document.getElementById('modalTitle').innerText = `स्टोर ${storeCode} की राशन मांग`;
+            const tbody = document.getElementById('modalBody');
+            tbody.innerHTML = '<tr><td colspan="3">लोड हो रहा है...</td></tr>';
+            document.getElementById('rationModal').style.display = 'block';
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/ration_demands?store_code=eq.${storeCode}&order=created_at.desc`, {
+                    headers: apiHeaders
+                });
+                const data = await res.json();
+                tbody.innerHTML = '';
+                if (data && data.length > 0) {
+                    data.forEach(d => {
+                        const dateObj = new Date(d.created_at);
+                        tbody.innerHTML += `<tr><td>${dateObj.toLocaleString('hi-IN')}</td><td>${d.item_name}</td><td>${d.quantity}</td></tr>`;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">कोई मांग दर्ज नहीं है।</td></tr>';
+                }
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="3" style="color:red;">एरर: ${e.message}</td></tr>`;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('rationModal').style.display = 'none';
         }
 
         async function loadAllRationDemands() {
-            try {
-                let query = supabase.from('ration_demands').select('*').order('created_at', { ascending: false });
-                
-                const filterDate = document.getElementById('dateFilter').value;
-                if (filterDate) {
-                    query = query.gte('created_at', `${filterDate}T00:00:00`).lte('created_at', `${filterDate}T23:59:59`);
-                }
+            const tbody = document.getElementById('allRationBody');
+            const filterDate = document.getElementById('dateFilter').value;
+            let url = `${SUPABASE_URL}/rest/v1/ration_demands?select=*&order=created_at.desc`;
 
-                const { data, error } = await query;
-                const tbody = document.getElementById('allRationBody');
+            if (filterDate) {
+                url += `&created_at=gte.${filterDate}T00:00:00&created_at=lte.${filterDate}T23:59:59`;
+            }
+
+            try {
+                const res = await fetch(url, { headers: apiHeaders });
+                const data = await res.json();
                 tbody.innerHTML = '';
-                
-                if (error) {
-                    console.log("राशन टेबल एरर:", error.message);
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">राशन टेबल मौजूद नहीं है या एरर है।</td></tr>';
-                } else if (data && data.length > 0) {
+                if (data && data.length > 0) {
                     data.forEach(d => {
                         const dateObj = new Date(d.created_at);
-                        const formattedDate = dateObj.toLocaleDateString('hi-IN') + " " + dateObj.toLocaleTimeString('hi-IN');
-                        tbody.innerHTML += `<tr><td>${formattedDate}</td><td><b>${d.store_code}</b></td><td>${d.item_name}</td><td>${d.quantity}</td></tr>`;
+                        tbody.innerHTML += `<tr><td>${dateObj.toLocaleString('hi-IN')}</td><td><b>${d.store_code}</b></td><td>${d.item_name}</td><td>${d.quantity}</td></tr>`;
                     });
                 } else {
                     tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">इस तारीख पर कोई राशन मांग नहीं है।</td></tr>';
                 }
-            } catch (err) {
-                console.error(err);
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="4" style="color:red;">लोड एरर: ${e.message}</td></tr>`;
             }
         }
 
