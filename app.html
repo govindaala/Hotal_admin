@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>होटल POS - लाइव ऐप प्रीव्यू</title>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
+        body { background: #1e293b; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 10px; }
+        
+        /* मोबाइल स्क्रीन फ्रेम */
+        .mobile-frame { width: 100%; max-width: 400px; height: 820px; background: #f8fafc; border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); display: flex; flex-direction: column; overflow: hidden; position: relative; border: 8px solid #0f172a; }
+        
+        .app-bar { background: #0f172a; color: white; padding: 16px; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; }
+        .sub-bar { background: #1e293b; color: #facc15; font-size: 11px; text-align: center; padding: 4px; }
+        .content { flex: 1; overflow-y: auto; padding: 16px; }
+
+        /* कार्ड और बटन */
+        .role-card { padding: 18px; border-radius: 14px; color: white; margin-bottom: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; }
+        .btn-dark { background: #0f172a; color: white; }
+        .btn-orange { background: #ea580c; color: white; }
+        .btn-teal { background: #0d9488; color: white; }
+
+        /* टेबल ग्रिड */
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .table-box { height: 90px; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-weight: bold; cursor: pointer; }
+        .bg-green { background: #16a34a; }
+        .bg-red { background: #dc2626; }
+
+        /* बॉटम शीट और मोडल */
+        .modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: flex-end; }
+        .sheet { background: white; width: 100%; height: 75%; border-radius: 20px 20px 0 0; padding: 16px; display: flex; flex-direction: column; }
+
+        /* बॉटम नेविगेशन */
+        .bottom-nav { background: white; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 10px 0; }
+        .nav-item { font-size: 12px; color: #64748b; cursor: pointer; text-align: center; }
+        .nav-item.active { color: #0f172a; font-weight: bold; }
+        
+        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="mobile-frame">
+    <!-- 1. होम स्क्रीन (गेटवे) -->
+    <div id="screen-gateway" style="display: flex; flex-direction: column; height: 100%;">
+        <div class="app-bar"><span>होटल POS सिस्टम</span></div>
+        <div class="content" style="display: flex; flex-direction: column; justify-content: center;">
+            <div class="role-card" style="background: #0f172a;" onclick="openLogin('counter')">
+                <div><h4>🖥️ मास्टर / ओनर</h4><p style="font-size: 12px; opacity: 0.8;">बिलिंग, मेन्यू, स्टाफ व गल्ला</p></div>
+                <span>➔</span>
+            </div>
+            <div class="role-card" style="background: #ea580c;" onclick="openLogin('waiter')">
+                <div><h4>📱 वेटर मोड</h4><p style="font-size: 12px; opacity: 0.8;">टेबल ऑर्डर, सर्च व त्वरित KOT</p></div>
+                <span>➔</span>
+            </div>
+            <div class="role-card" style="background: #0d9488;" onclick="openLogin('cook')">
+                <div><h4>👨‍🍳 कुक मोड (KDS)</h4><p style="font-size: 12px; opacity: 0.8;">लाइव किचन KOT व राशन मांग</p></div>
+                <span>➔</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. लॉगिन स्क्रीन -->
+    <div id="screen-login" style="display: none; flex-direction: column; height: 100%;">
+        <div class="app-bar"><span id="login-title">लॉगिन</span><button onclick="showGateway()" style="background:none; border:none; color:white; font-size:16px;">✕</button></div>
+        <div class="content" style="display: flex; flex-direction: column; justify-content: center;">
+            <input type="text" id="login-store" placeholder="स्टोर कोड (उदा. 111)" value="111">
+            <div id="staff-id-box"><input type="text" id="login-staff" placeholder="स्टाफ ID (उदा. Waiter1)"></div>
+            <input type="password" id="login-pin" placeholder="पिन कोड">
+            <button class="btn btn-dark" onclick="processLogin()">लॉगिन करें</button>
+        </div>
+    </div>
+
+    <!-- 3. मास्टर ऐप -->
+    <div id="screen-master" style="display: none; flex-direction: column; height: 100%;">
+        <div class="app-bar"><span>111 - मास्टर</span><button onclick="showGateway()" style="background:none; border:none; color:white;">लॉगआउट</button></div>
+        <div class="sub-bar">हॉटस्पॉट चालू रखें | वाई-फाई IP: 192.168.43.1</div>
+        <div class="content" id="master-tab-tables">
+            <div class="grid" id="master-table-grid"></div>
+        </div>
+        <div class="content" id="master-tab-menu" style="display: none;">
+            <button class="btn btn-dark" style="margin-bottom: 12px;" onclick="promptAddDish()">+ नया व्यंजन जोड़ें</button>
+            <div id="master-menu-list"></div>
+        </div>
+        <div class="content" id="master-tab-ration" style="display: none;">
+            <h4>किचन राशन मांग</h4>
+            <div id="master-ration-list" style="margin-top: 10px;"></div>
+        </div>
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="switchMasterTab(0)">टेबल्स</div>
+            <div class="nav-item" onclick="switchMasterTab(1)">मेन्यू</div>
+            <div class="nav-item" onclick="switchMasterTab(2)">किचन मांग</div>
+        </div>
+    </div>
+
+    <!-- 4. वेटर ऐप -->
+    <div id="screen-waiter" style="display: none; flex-direction: column; height: 100%;">
+        <div class="app-bar" style="background: #ea580c;"><span>वेटर: Waiter1</span><button onclick="showGateway()" style="background:none; border:none; color:white;">लॉगआउट</button></div>
+        <div class="sub-bar" style="background: #c2410c; color: #86efac;">● काउंटर से कनेक्टेड (192.168.43.1)</div>
+        <div class="content">
+            <div class="grid" id="waiter-table-grid"></div>
+        </div>
+    </div>
+
+    <!-- 5. कुक ऐप -->
+    <div id="screen-cook" style="display: none; flex-direction: column; height: 100%;">
+        <div class="app-bar" style="background: #0d9488;"><span>कुक KDS</span><button onclick="showGateway()" style="background:none; border:none; color:white;">लॉगआउट</button></div>
+        <div class="sub-bar" style="background: #115e59; color: #86efac;">● कनेक्टेड</div>
+        <div style="display: flex; border-bottom: 1px solid #e2e8f0;">
+            <button class="btn" style="border-radius: 0; background: #0d9488; color: white;" onclick="switchCookTab('kot')">लाइव KOT</button>
+            <button class="btn" style="border-radius: 0; background: #f1f5f9; color: #0f172a;" onclick="switchCookTab('ration')">थोक राशन</button>
+        </div>
+        <div class="content" id="cook-tab-kot">
+            <div id="cook-kot-list"></div>
+        </div>
+        <div class="content" id="cook-tab-ration" style="display: none;">
+            <div style="display: flex; gap: 6px;">
+                <input type="text" id="new-ration-item" placeholder="नया सामान (उदा. हरी मिर्च)" style="flex: 2;">
+                <input type="text" id="new-ration-qty" placeholder="मात्रा" style="flex: 1;">
+                <button class="btn btn-teal" style="width: 50px; height: 42px;" onclick="addNewRation()">+</button>
+            </div>
+            <div id="cook-ration-checklist"></div>
+            <button class="btn btn-teal" style="margin-top: 12px;" onclick="sendRation()">मांग भेजें</button>
+        </div>
+    </div>
+
+    <!-- वेटर ऑर्डर शीट (मॉडल) -->
+    <div class="modal" id="order-sheet">
+        <div class="sheet">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <h3 id="sheet-title">टेबल T-1 ऑर्डर</h3>
+                <button onclick="closeSheet()" style="border: none; background: none; font-size: 18px;">✕</button>
+            </div>
+            <div style="flex: 1; overflow-y: auto;" id="sheet-menu-list"></div>
+            <div style="padding-top: 10px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: bold; font-size: 18px;">कुल: ₹<span id="sheet-total">0</span></div>
+                <button class="btn btn-orange" style="width: 140px;" onclick="submitKOT()">KOT भेजें</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let activeRole = 'counter';
+    let menu = [
+        { id: 1, name: 'दाल तड़का', price: 120, available: true },
+        { id: 2, name: 'पनीर बटर मसाला', price: 180, available: true },
+        { id: 3, name: 'तंदूरी रोटी', price: 12, available: true },
+        { id: 4, name: 'जीरा राइस', price: 100, available: true }
+    ];
+    let activeOrders = {}; // { 1: [{ name, price, qty }] }
+    let liveKOTs = [];
+    let liveRations = [];
+    let rationCatalog = ['गेहूं आटा', 'बासमती चावल', 'सोयाबीन तेल', 'पनीर', 'शक्कर'];
+    let currentSelectedTable = 1;
+    let tempCart = {};
+
+    function showGateway() {
+        document.querySelectorAll('.mobile-frame > div').forEach(d => d.style.display = 'none');
+        document.getElementById('screen-gateway').style.display = 'flex';
+    }
+
+    function openLogin(role) {
+        activeRole = role;
+        document.getElementById('screen-gateway').style.display = 'none';
+        document.getElementById('screen-login').style.display = 'flex';
+        document.getElementById('staff-id-box').style.display = role === 'counter' ? 'none' : 'block';
+        document.getElementById('login-title').innerText = role === 'counter' ? 'मास्टर लॉगिन' : (role === 'waiter' ? 'वेटर लॉगिन' : 'कुक लॉगिन');
+    }
+
+    function processLogin() {
+        document.getElementById('screen-login').style.display = 'none';
+        if (activeRole === 'counter') {
+            document.getElementById('screen-master').style.display = 'flex';
+            renderMasterTables();
+            renderMasterMenu();
+        } else if (activeRole === 'waiter') {
+            document.getElementById('screen-waiter').style.display = 'flex';
+            renderWaiterTables();
+        } else {
+            document.getElementById('screen-cook').style.display = 'flex';
+            renderCookKOTs();
+            renderCookRations();
+        }
+    }
+
+    // मास्टर स्क्रीन फंक्शन्स
+    function renderMasterTables() {
+        const grid = document.getElementById('master-table-grid');
+        grid.innerHTML = '';
+        for (let i = 1; i <= 10; i++) {
+            const hasOrder = activeOrders[i] && activeOrders[i].length > 0;
+            grid.innerHTML += `
+                <div class="table-box ${hasOrder ? 'bg-red' : 'bg-green'}" onclick="settleBill(${i})">
+                    <span>T-${i}</span>
+                    <span style="font-size: 11px;">${hasOrder ? 'ऑर्डर चालू' : 'खाली'}</span>
+                </div>`;
+        }
+    }
+
+    function settleBill(tbl) {
+        if (!activeOrders[tbl]) return;
+        const total = activeOrders[tbl].reduce((s, it) => s + (it.price * it.qty), 0);
+        if (confirm(`टेबल T-${tbl} का कुल बिल ₹${total} है। क्या आप बिल सेटल और प्रिंट करना चाहते हैं?`)) {
+            delete activeOrders[tbl];
+            renderMasterTables();
+            alert('बिल सेटल हो गया और रसीद प्रिंट हो गई!');
+        }
+    }
+
+    function switchMasterTab(idx) {
+        document.querySelectorAll('#screen-master .nav-item').forEach((el, i) => el.classList.toggle('active', i === idx));
+        document.getElementById('master-tab-tables').style.display = idx === 0 ? 'block' : 'none';
+        document.getElementById('master-tab-menu').style.display = idx === 1 ? 'block' : 'none';
+        document.getElementById('master-tab-ration').style.display = idx === 2 ? 'block' : 'none';
+    }
+
+    function renderMasterMenu() {
+        const list = document.getElementById('master-menu-list');
+        list.innerHTML = menu.map((m, i) => `
+            <div style="background:white; padding:12px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                <div><b>${m.name}</b><br><small>₹${m.price}</small></div>
+                <input type="checkbox" ${m.available ? 'checked' : ''} onchange="toggleDish(${i})" style="width:20px; height:20px; margin:0;">
+            </div>
+        `).join('');
+    }
+
+    function toggleDish(idx) {
+        menu[idx].available = !menu[idx].available;
+    }
+
+    function promptAddDish() {
+        const name = prompt('व्यंजन का नाम:');
+        const price = prompt('कीमत (₹):');
+        if (name && price) {
+            menu.push({ id: Date.now(), name, price: parseFloat(price), available: true });
+            renderMasterMenu();
+        }
+    }
+
+    // वेटर स्क्रीन फंक्शन्स
+    function renderWaiterTables() {
+        const grid = document.getElementById('waiter-table-grid');
+        grid.innerHTML = '';
+        for (let i = 1; i <= 10; i++) {
+            const hasOrder = activeOrders[i] && activeOrders[i].length > 0;
+            grid.innerHTML += `
+                <div class="table-box ${hasOrder ? 'bg-red' : 'bg-green'}" onclick="openTableOrder(${i})">
+                    <span>T-${i}</span>
+                    <span style="font-size: 11px;">${hasOrder ? 'रनिंग' : 'खाली'}</span>
+                </div>`;
+        }
+    }
+
+    function openTableOrder(tbl) {
+        currentSelectedTable = tbl;
+        tempCart = {};
+        document.getElementById('sheet-title').innerText = `टेबल T-${tbl} ऑर्डर`;
+        renderOrderItems();
+        document.getElementById('order-sheet').style.display = 'flex';
+    }
+
+    function renderOrderItems() {
+        const list = document.getElementById('sheet-menu-list');
+        list.innerHTML = menu.map(m => {
+            const qty = tempCart[m.id] || 0;
+            return `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f1f5f9;">
+                    <div><b>${m.name}</b><br><small>₹${m.price}</small></div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        ${qty > 0 ? `<button onclick="changeQty(${m.id}, -1)" style="width:28px; height:28px;">-</button><span>${qty}</span>` : ''}
+                        <button onclick="changeQty(${m.id}, 1)" style="width:28px; height:28px; background:#16a34a; color:white; border:none; border-radius:4px;">+</button>
+                    </div>
+                </div>`;
+        }).join('');
+        calculateTotal();
+    }
+
+    function changeQty(id, delta) {
+        tempCart[id] = (tempCart[id] || 0) + delta;
+        if (tempCart[id] <= 0) delete tempCart[id];
+        renderOrderItems();
+    }
+
+    function calculateTotal() {
+        let total = 0;
+        for (let id in tempCart) {
+            const item = menu.find(m => m.id == id);
+            total += item.price * tempCart[id];
+        }
+        document.getElementById('sheet-total').innerText = total;
+    }
+
+    function closeSheet() {
+        document.getElementById('order-sheet').style.display = 'none';
+    }
+
+    function submitKOT() {
+        let items = [];
+        for (let id in tempCart) {
+            const m = menu.find(item => item.id == id);
+            items.push({ name: m.name, price: m.price, qty: tempCart[id] });
+        }
+        if (items.length === 0) return;
+
+        if (!activeOrders[currentSelectedTable]) activeOrders[currentSelectedTable] = [];
+        activeOrders[currentSelectedTable].push(...items);
+        liveKOTs.push({ table: currentSelectedTable, items: items });
+
+        closeSheet();
+        renderWaiterTables();
+        alert(`T-${currentSelectedTable} का KOT किचन और मास्टर को भेजा गया!`);
+    }
+
+    // कुक स्क्रीन फंक्शन्स
+    function switchCookTab(tab) {
+        document.getElementById('cook-tab-kot').style.display = tab === 'kot' ? 'block' : 'none';
+        document.getElementById('cook-tab-ration').style.display = tab === 'ration' ? 'block' : 'none';
+    }
+
+    function renderCookKOTs() {
+        const list = document.getElementById('cook-kot-list');
+        if (liveKOTs.length === 0) {
+            list.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:20px;">कोई नया KOT नहीं है 👨‍🍳</p>';
+            return;
+        }
+        list.innerHTML = liveKOTs.map((k, i) => `
+            <div style="background:white; padding:12px; border-radius:8px; margin-bottom:10px; border-left:4px solid #0d9488;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <b>टेबल T-${k.table}</b>
+                    <button class="btn btn-teal" style="width:auto; padding:4px 8px; font-size:12px;" onclick="completeKOT(${i})">तैयार ✓</button>
+                </div>
+                ${k.items.map(it => `<div>${it.name} x ${it.qty}</div>`).join('')}
+            </div>
+        `).join('');
+    }
+
+    function completeKOT(idx) {
+        liveKOTs.splice(idx, 1);
+        renderCookKOTs();
+    }
+
+    function renderCookRations() {
+        const box = document.getElementById('cook-ration-checklist');
+        box.innerHTML = rationCatalog.map(r => `
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f1f5f9;">
+                <label><input type="checkbox" value="${r}"> ${r}</label>
+                <input type="text" placeholder="मात्रा (उदा. 5 KG)" style="width:110px; margin:0; padding:4px;">
+            </div>
+        `).join('');
+    }
+
+    function addNewRation() {
+        const item = document.getElementById('new-ration-item').value.trim();
+        if (item) {
+            rationCatalog.push(item);
+            renderCookRations();
+            document.getElementById('new-ration-item').value = '';
+        }
+    }
+
+    function sendRation() {
+        const rows = document.querySelectorAll('#cook-ration-checklist > div');
+        let demands = [];
+        rows.forEach(r => {
+            const cb = r.querySelector('input[type="checkbox"]');
+            const qty = r.querySelector('input[type="text"]').value.trim();
+            if (cb.checked) {
+                demands.push({ item_name: cb.value, quantity: qty || '1 Unit' });
+            }
+        });
+        if (demands.length === 0) return alert('कृपया सामग्री चुनें!');
+        
+        liveRations.push(...demands);
+        
+        // मास्टर लिस्ट अपडेट करें
+        const masterList = document.getElementById('master-ration-list');
+        masterList.innerHTML = liveRations.map(d => `
+            <div style="background:white; padding:10px; border-radius:6px; margin-bottom:6px; display:flex; justify-content:space-between;">
+                <b>${d.item_name}</b><span style="color:#dc2626; font-weight:bold;">${d.quantity}</span>
+            </div>
+        `).join('');
+
+        alert('मांग मास्टर और पोर्टल को दर्ज कर दी गई!');
+    }
+</script>
+</body>
+  </html>
+
