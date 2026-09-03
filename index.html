@@ -13,10 +13,11 @@
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background: #0f172a; color: white; }
-        .btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
+        .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; font-size: 16px; }
         .btn-green { background: #10b981; }
         .btn-red { background: #ef4444; }
         .btn-blue { background: #3b82f6; }
+        .btn-small { padding: 5px 10px; font-size: 12px; margin-left: 10px; background: #f59e0b; } /* एडिट बटन के लिए पीला रंग */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
         .modal-content { background: white; margin: 5% auto; padding: 20px; width: 80%; max-height: 80vh; overflow-y: auto; border-radius: 10px; }
         .close { float: right; font-size: 28px; cursor: pointer; color: red; font-weight: bold; }
@@ -45,7 +46,7 @@
                 <label>कुल टेबल्स:</label>
                 <input type="number" id="totalTables" placeholder="उदा. 10">
             </div>
-            <button class="btn btn-green" onclick="registerHotel()">होटल रजिस्टर करें</button>
+            <button class="btn btn-green" id="submitBtn" onclick="registerHotel()">होटल रजिस्टर करें</button>
             <p id="regMsg" style="font-weight: bold; margin-top: 10px;"></p>
         </div>
 
@@ -58,6 +59,7 @@
                         <th>स्टोर कोड</th>
                         <th>होटल का नाम</th>
                         <th>टेबल्स</th>
+                        <th>मास्टर पिन</th> <!-- नया कॉलम -->
                         <th>स्टेटस</th>
                         <th>एक्शन</th>
                         <th>राशन देखें</th>
@@ -67,7 +69,7 @@
             </table>
         </div>
 
-        <!-- 3. कंबाइंड राशन लिस्ट (डेट फिल्टर के साथ) -->
+        <!-- 3. कंबाइंड राशन लिस्ट -->
         <div class="card">
             <h2>🛒 सभी होटलों की कुल राशन मांग</h2>
             <label style="font-weight: bold;">तारीख चुनें: </label>
@@ -86,7 +88,7 @@
         </div>
     </div>
 
-    <!-- मॉडल (पॉपअप) किसी एक होटल का राशन देखने के लिए -->
+    <!-- मॉडल (पॉपअप) -->
     <div id="rationModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
@@ -102,73 +104,120 @@
 
     <script>
         const supabaseUrl = 'https://hbewnquphiwvxaxittrl.supabase.co';
-        const supabaseKey = 'sb_publishable_HA1-PBV55kEZet2GG_IBdg_HjUzfOxf'; // आपकी Supabase API Key
+        const supabaseKey = 'sb_publishable_HA1-PBV55kEZet2GG_IBdg_HjUzfOxf'; 
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         async function registerHotel() {
-            const name = document.getElementById('hotelName').value;
-            const code = document.getElementById('storeCode').value;
-            const pin = document.getElementById('masterPin').value;
-            const tables = document.getElementById('totalTables').value;
+            try {
+                const name = document.getElementById('hotelName').value;
+                const code = document.getElementById('storeCode').value;
+                const pin = document.getElementById('masterPin').value;
+                const tables = document.getElementById('totalTables').value;
 
-            if(!name || !code || !pin || !tables) {
-                alert("कृपया रजिस्ट्रेशन के लिए सभी जानकारी भरें!");
-                return;
-            }
+                if(!name || !code || !pin || !tables) {
+                    alert("कृपया रजिस्ट्रेशन के लिए सभी जानकारी (नाम, कोड, पिन, टेबल) भरें!");
+                    return;
+                }
 
-            const { data, error } = await supabase.from('restaurants').insert([
-                { name: name, store_code: code, master_pin: pin, total_tables: parseInt(tables), is_active: true }
-            ]);
+                const btn = document.getElementById('submitBtn');
+                btn.innerText = "सेव हो रहा है...";
+                btn.disabled = true;
 
-            const msgLabel = document.getElementById('regMsg');
-            if (error) {
-                msgLabel.style.color = 'red';
-                msgLabel.innerText = "एरर: यह स्टोर कोड पहले से मौजूद हो सकता है।";
-            } else {
-                msgLabel.style.color = 'green';
-                msgLabel.innerText = "✅ होटल सफलतापूर्वक रजिस्टर हो गया!";
-                document.getElementById('hotelName').value = '';
-                document.getElementById('storeCode').value = '';
-                document.getElementById('masterPin').value = '';
-                document.getElementById('totalTables').value = '';
-                loadRestaurants(); // लिस्ट तुरंत अपडेट करें
+                const { data, error } = await supabase.from('restaurants').insert([
+                    { name: name, store_code: code, master_pin: pin, total_tables: parseInt(tables), is_active: true }
+                ]);
+
+                if (error) {
+                    alert("डेटाबेस एरर: \n" + error.message);
+                    document.getElementById('regMsg').style.color = 'red';
+                    document.getElementById('regMsg').innerText = "एरर: " + error.message;
+                } else {
+                    document.getElementById('regMsg').style.color = 'green';
+                    document.getElementById('regMsg').innerText = "✅ होटल सफलतापूर्वक रजिस्टर हो गया!";
+                    document.getElementById('hotelName').value = '';
+                    document.getElementById('storeCode').value = '';
+                    document.getElementById('masterPin').value = '';
+                    document.getElementById('totalTables').value = '';
+                    await loadRestaurants(); 
+                }
+                btn.innerText = "होटल रजिस्टर करें";
+                btn.disabled = false;
+            } catch (err) {
+                alert("सिस्टम एरर: " + err.message);
             }
         }
 
         async function loadRestaurants() {
-            const { data, error } = await supabase.from('restaurants').select('*');
-            if (error) return;
-            
-            const tbody = document.getElementById('restaurantBody');
-            tbody.innerHTML = '';
-            
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">अभी कोई होटल रजिस्टर नहीं है।</td></tr>';
-                return;
-            }
+            try {
+                const { data, error } = await supabase.from('restaurants').select('*');
+                
+                if (error) {
+                    alert("रेस्टोरेंट लिस्ट लोड करने में एरर: \n" + error.message);
+                    return;
+                }
+                
+                const tbody = document.getElementById('restaurantBody');
+                tbody.innerHTML = '';
+                
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">अभी कोई होटल रजिस्टर नहीं है।</td></tr>';
+                    return;
+                }
 
-            data.forEach(r => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><b>${r.store_code}</b></td>
-                    <td>${r.name}</td>
-                    <td>${r.total_tables}</td>
-                    <td style="color: ${r.is_active ? 'green' : 'red'}"><b>${r.is_active ? 'चालू' : 'ब्लॉक'}</b></td>
-                    <td>
-                        <button class="btn ${r.is_active ? 'btn-red' : 'btn-green'}" onclick="toggleStatus('${r.store_code}', ${r.is_active})">
-                            ${r.is_active ? 'ब्लॉक करें' : 'चालू करें'}
-                        </button>
-                    </td>
-                    <td>
-                        <button class="btn btn-blue" onclick="viewSingleRestaurantRation('${r.store_code}')">राशन देखें</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+                data.forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><b>${r.store_code}</b></td>
+                        <td>${r.name}</td>
+                        <td>${r.total_tables}</td>
+                        <td>
+                            <b>${r.master_pin}</b> 
+                            <button class="btn btn-small" onclick="editMasterPin('${r.store_code}', '${r.master_pin}')">✏️ एडिट</button>
+                        </td>
+                        <td style="color: ${r.is_active ? 'green' : 'red'}"><b>${r.is_active ? 'चालू' : 'ब्लॉक'}</b></td>
+                        <td>
+                            <button class="btn ${r.is_active ? 'btn-red' : 'btn-green'}" onclick="toggleStatus('${r.store_code}', ${r.is_active})">
+                                ${r.is_active ? 'ब्लॉक करें' : 'चालू करें'}
+                            </button>
+                        </td>
+                        <td>
+                            <button class="btn btn-blue" onclick="viewSingleRestaurantRation('${r.store_code}')">राशन देखें</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // नया फ़ंक्शन: पिन एडिट करने के लिए
+        async function editMasterPin(storeCode, currentPin) {
+            const newPin = prompt(`स्टोर कोड [${storeCode}] के लिए नया मास्टर पिन डालें:`, currentPin);
+            
+            // अगर यूज़र ने Cancel नहीं किया और पिन खाली नहीं है
+            if (newPin !== null && newPin.trim() !== '') {
+                if(newPin.trim().length < 4) {
+                    alert("पिन कम से कम 4 अंकों का होना चाहिए!");
+                    return;
+                }
+
+                const { error } = await supabase.from('restaurants').update({ master_pin: newPin.trim() }).eq('store_code', storeCode);
+                
+                if (error) {
+                    alert("पिन अपडेट करने में एरर: " + error.message);
+                } else {
+                    alert("✅ पिन सफलतापूर्वक बदल गया!");
+                    loadRestaurants(); // लिस्ट को रिफ्रेश करें
+                }
+            }
         }
 
         async function toggleStatus(code, currentStatus) {
-            await supabase.from('restaurants').update({ is_active: !currentStatus }).eq('store_code', code);
+            const { error } = await supabase.from('restaurants').update({ is_active: !currentStatus }).eq('store_code', code);
+            if (error) {
+                alert("स्टेटस बदलने में एरर: " + error.message);
+            }
             loadRestaurants();
         }
 
@@ -179,7 +228,9 @@
             const tbody = document.getElementById('modalBody');
             tbody.innerHTML = '';
             
-            if (data && data.length > 0) {
+            if (error) {
+                alert("राशन लिस्ट लाने में एरर: \n" + error.message);
+            } else if (data && data.length > 0) {
                 data.forEach(d => {
                     const dateObj = new Date(d.created_at);
                     const formattedDate = dateObj.toLocaleDateString('hi-IN') + " " + dateObj.toLocaleTimeString('hi-IN');
@@ -196,31 +247,36 @@
         }
 
         async function loadAllRationDemands() {
-            let query = supabase.from('ration_demands').select('*').order('created_at', { ascending: false });
-            
-            const filterDate = document.getElementById('dateFilter').value;
-            if (filterDate) {
-                // अगर डेट चुनी है, तो सिर्फ उस दिन का डेटा दिखाएगा
-                query = query.gte('created_at', `${filterDate}T00:00:00`).lte('created_at', `${filterDate}T23:59:59`);
-            }
+            try {
+                let query = supabase.from('ration_demands').select('*').order('created_at', { ascending: false });
+                
+                const filterDate = document.getElementById('dateFilter').value;
+                if (filterDate) {
+                    query = query.gte('created_at', `${filterDate}T00:00:00`).lte('created_at', `${filterDate}T23:59:59`);
+                }
 
-            const { data, error } = await query;
-            const tbody = document.getElementById('allRationBody');
-            tbody.innerHTML = '';
-            
-            if (data && data.length > 0) {
-                data.forEach(d => {
-                    const dateObj = new Date(d.created_at);
-                    const formattedDate = dateObj.toLocaleDateString('hi-IN') + " " + dateObj.toLocaleTimeString('hi-IN');
-                    tbody.innerHTML += `<tr><td>${formattedDate}</td><td><b>${d.store_code}</b></td><td>${d.item_name}</td><td>${d.quantity}</td></tr>`;
-                });
-            } else {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">इस तारीख पर कोई राशन मांग नहीं है।</td></tr>';
+                const { data, error } = await query;
+                const tbody = document.getElementById('allRationBody');
+                tbody.innerHTML = '';
+                
+                if (error) {
+                    console.log("राशन टेबल एरर:", error.message);
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">राशन टेबल मौजूद नहीं है या एरर है।</td></tr>';
+                } else if (data && data.length > 0) {
+                    data.forEach(d => {
+                        const dateObj = new Date(d.created_at);
+                        const formattedDate = dateObj.toLocaleDateString('hi-IN') + " " + dateObj.toLocaleTimeString('hi-IN');
+                        tbody.innerHTML += `<tr><td>${formattedDate}</td><td><b>${d.store_code}</b></td><td>${d.item_name}</td><td>${d.quantity}</td></tr>`;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">इस तारीख पर कोई राशन मांग नहीं है।</td></tr>';
+                }
+            } catch (err) {
+                console.error(err);
             }
         }
 
         window.onload = () => {
-            // पेज लोड होते ही आज की तारीख सेट हो जाएगी
             document.getElementById('dateFilter').valueAsDate = new Date();
             loadRestaurants();
             loadAllRationDemands();
