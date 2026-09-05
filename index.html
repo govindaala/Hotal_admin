@@ -273,6 +273,7 @@
             setTimeout(() => { alertBox.style.display = 'none'; }, 6000);
         }
 
+        // ================= 1. होटल मैनेजमेंट =================
         async function registerHotel() {
             const editingCode = document.getElementById('editingStoreCode').value.trim();
             const name = document.getElementById('hotelName').value.trim();
@@ -456,7 +457,7 @@
             } catch (err) { showMessage("डिलीट एरर: " + err.message, true); }
         }
 
-        // ================= 2. प्रोडक्ट वाइज सेल एनालिटिक्स (Fail-Safe Code) =================
+        // ================= 2. प्रोडक्ट वाइज सेल एनालिटिक्स (sales_reports टेबल) =================
         async function fetchProductWiseSales() {
             const hotel = document.getElementById('salesHotelFilter').value;
             const sDate = document.getElementById('salesStartDate').value;
@@ -465,7 +466,7 @@
 
             tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">डेटा लोड हो रहा है...</td></tr>';
 
-            let url = `${SUPABASE_URL}/rest/v1/orders?select=*&order=created_at.desc`;
+            let url = `${SUPABASE_URL}/rest/v1/sales_reports?select=*&order=created_at.desc`;
             if (hotel !== 'ALL') url += `&store_code=eq.${hotel}`;
             if (sDate) url += `&created_at=gte.${sDate}T00:00:00`;
             if (eDate) url += `&created_at=lte.${eDate}T23:59:59`;
@@ -474,22 +475,32 @@
                 const res = await fetch(url, { headers: apiHeaders });
                 const rawData = await res.json();
 
-                // यदि Supabase ने कोई एरर संदेश दिया हो
                 if (!res.ok || (rawData && !Array.isArray(rawData))) {
-                    const errMsg = rawData.message || rawData.error || (rawData.code ? `Supabase Code: ${rawData.code}` : 'ऑर्डर टेबल लोड नहीं हो सकी');
+                    const errMsg = rawData.message || rawData.error || 'sales_reports टेबल लोड नहीं हो सकी';
                     tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;"><b>लोड एरर:</b> ${errMsg}</td></tr>`;
                     return;
                 }
 
-                const orders = rawData;
+                const salesList = rawData;
                 const productMap = {};
                 let grandTotalSales = 0;
                 let grandTotalQty = 0;
 
-                orders.forEach(ord => {
-                    let items = ord.items || ord.order_items || ord.cart || [];
+                salesList.forEach(sale => {
+                    let items = sale.items || sale.order_items || sale.bill_items || sale.cart || [];
                     if (typeof items === 'string') {
                         try { items = JSON.parse(items); } catch (_) { items = []; }
+                    }
+
+                    if (!Array.isArray(items) || items.length === 0) {
+                        if (sale.item_name || sale.name) {
+                            items = [{
+                                name: sale.item_name || sale.name,
+                                qty: sale.quantity || sale.qty || 1,
+                                price: sale.price || sale.rate || 0,
+                                total: sale.total || sale.amount || 0
+                            }];
+                        }
                     }
 
                     if (Array.isArray(items)) {
@@ -497,7 +508,7 @@
                             const name = it.name || it.item_name || 'अन्य डिश';
                             const qty = Number(it.qty || it.quantity || 1);
                             const price = Number(it.price || it.rate || 0);
-                            const lineTotal = (qty * price) || Number(it.total || 0);
+                            const lineTotal = (qty * price) || Number(it.total || it.amount || 0);
 
                             if (!productMap[name]) {
                                 productMap[name] = { name: name, qty: 0, revenue: 0 };
@@ -550,7 +561,7 @@
             }
         }
 
-        // ================= 3. एक्सेल एक्सपोर्ट =================
+        // ================= 3. एक्सेल एक्सपोर्ट (Excel) =================
         function exportSalesToExcel() {
             if (cachedSalesData.length === 0) {
                 alert('डाउनलोड करने के लिए कोई बिक्री डेटा नहीं है!');
