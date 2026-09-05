@@ -18,13 +18,11 @@
         input, select, textarea { padding: 9px; width: 100%; box-sizing: border-box; margin-top: 4px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; }
         input:focus, select:focus { border-color: #0284c7; }
         
-        /* Tables */
         table { width: 100%; border-collapse: collapse; margin-top: 12px; }
         th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
         th { background: #0f172a; color: white; }
         tr:hover td { background: #f8fafc; }
 
-        /* Buttons */
         .btn { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; font-size: 13px; transition: 0.2s; }
         .btn-green { background: #10b981; }
         .btn-green:hover { background: #059669; }
@@ -37,7 +35,6 @@
         .btn-pdf { background: #dc2626; }
         .btn-small { padding: 4px 8px; font-size: 11px; border-radius: 4px; }
 
-        /* KPI Box */
         .kpi-row { display: flex; gap: 15px; margin-bottom: 14px; }
         .kpi-box { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center; }
         .kpi-title { font-size: 12px; color: #64748b; font-weight: bold; }
@@ -51,7 +48,6 @@
         .modal-content { background: white; margin: 5% auto; padding: 20px; width: 85%; max-width: 750px; max-height: 85vh; overflow-y: auto; border-radius: 10px; }
         .close { float: right; font-size: 26px; cursor: pointer; color: red; font-weight: bold; }
 
-        /* Print Style for Crisp PDF & Hindi Fonts */
         @media print {
             body { background: white; padding: 0; }
             .no-print, header, .btn, .filter-row, #statusAlert { display: none !important; }
@@ -119,7 +115,7 @@
             </div>
         </div>
 
-        <!-- 2. प्रोडक्ट वाइज सेल एनालिटिक्स सेक्शन (NEW) -->
+        <!-- 2. प्रोडक्ट वाइज सेल एनालिटिक्स सेक्शन -->
         <div class="card" id="salesSection">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h2>📊 प्रोडक्ट-वाइज बिक्री रिपोर्ट (Sales Analytics)</h2>
@@ -129,7 +125,6 @@
                 </div>
             </div>
 
-            <!-- फ़िल्टर बार -->
             <div class="filter-row no-print">
                 <div class="filter-item">
                     <label>होटल चुनें:</label>
@@ -147,7 +142,6 @@
                 </div>
             </div>
 
-            <!-- KPI Cards -->
             <div class="kpi-row">
                 <div class="kpi-box">
                     <div class="kpi-title">कुल बिक्री रकम</div>
@@ -163,7 +157,6 @@
                 </div>
             </div>
 
-            <!-- सेल टेबल -->
             <div style="overflow-x: auto;">
                 <table id="salesTable">
                     <thead>
@@ -177,7 +170,7 @@
                         </tr>
                     </thead>
                     <tbody id="salesBody">
-                        <tr><td colspan="6" style="text-align: center; color: #64748b;">डेटा लोड करने के लिए दिनांक चुनें...</td></tr>
+                        <tr><td colspan="6" style="text-align: center; color: #64748b;">डेटा लोड हो रहा है...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -280,7 +273,6 @@
             setTimeout(() => { alertBox.style.display = 'none'; }, 6000);
         }
 
-        // ================= 1. होटल मैनेजमेंट =================
         async function registerHotel() {
             const editingCode = document.getElementById('editingStoreCode').value.trim();
             const name = document.getElementById('hotelName').value.trim();
@@ -394,23 +386,21 @@
                     headers: apiHeaders
                 });
                 const data = await res.json();
-                cachedHotels = data || [];
+                cachedHotels = Array.isArray(data) ? data : [];
                 tbody.innerHTML = '';
                 selectFilter.innerHTML = '<option value="ALL">सभी होटल (All Stores)</option>';
 
-                if (!data || data.length === 0) {
+                if (cachedHotels.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">अभी कोई होटल रजिस्टर नहीं है।</td></tr>';
                     return;
                 }
 
-                data.forEach(r => {
-                    // ड्रॉपडाउन फ़िल्टर में जोड़ें
+                cachedHotels.forEach(r => {
                     const opt = document.createElement('option');
                     opt.value = r.store_code;
                     opt.innerText = `${r.name} (${r.store_code})`;
                     selectFilter.appendChild(opt);
 
-                    // टेबल रो
                     const pin = r.pin || r.master_pin || '-';
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
@@ -466,8 +456,7 @@
             } catch (err) { showMessage("डिलीट एरर: " + err.message, true); }
         }
 
-        // ================= 2. प्रोडक्ट वाइज सेल एनालिटिक्स =================
-                // ================= 2. प्रोडक्ट वाइज सेल एनालिटिक्स (सुधरा हुआ सुरक्षित कोड) =================
+        // ================= 2. प्रोडक्ट वाइज सेल एनालिटिक्स (Fail-Safe Code) =================
         async function fetchProductWiseSales() {
             const hotel = document.getElementById('salesHotelFilter').value;
             const sDate = document.getElementById('salesStartDate').value;
@@ -476,7 +465,6 @@
 
             tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">डेटा लोड हो रहा है...</td></tr>';
 
-            // URL तैयार करें
             let url = `${SUPABASE_URL}/rest/v1/orders?select=*&order=created_at.desc`;
             if (hotel !== 'ALL') url += `&store_code=eq.${hotel}`;
             if (sDate) url += `&created_at=gte.${sDate}T00:00:00`;
@@ -486,22 +474,20 @@
                 const res = await fetch(url, { headers: apiHeaders });
                 const rawData = await res.json();
 
-                // यदि Supabase से कोई एरर आया हो
-                if (!res.ok || rawData.message || rawData.error) {
-                    throw new Error(rawData.message || rawData.error || 'Supabase टेबल एक्सेस एरर');
+                // यदि Supabase ने कोई एरर संदेश दिया हो
+                if (!res.ok || (rawData && !Array.isArray(rawData))) {
+                    const errMsg = rawData.message || rawData.error || (rawData.code ? `Supabase Code: ${rawData.code}` : 'ऑर्डर टेबल लोड नहीं हो सकी');
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;"><b>लोड एरर:</b> ${errMsg}</td></tr>`;
+                    return;
                 }
 
-                // पक्का करें कि डेटा एक वैध एरे (Array) ही हो
-                const orders = Array.isArray(rawData) ? rawData : [];
-
+                const orders = rawData;
                 const productMap = {};
                 let grandTotalSales = 0;
                 let grandTotalQty = 0;
 
                 orders.forEach(ord => {
-                    // आपके डेटाबेस में कॉलम का नाम 'items' या 'order_items' या 'cart' हो सकता है
                     let items = ord.items || ord.order_items || ord.cart || [];
-                    
                     if (typeof items === 'string') {
                         try { items = JSON.parse(items); } catch (_) { items = []; }
                     }
@@ -527,7 +513,6 @@
 
                 cachedSalesData = Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
 
-                // KPI कार्ड्स अपडेट
                 document.getElementById('kpiTotalRevenue').innerText = '₹' + grandTotalSales.toFixed(2);
                 document.getElementById('kpiTotalQty').innerText = grandTotalQty;
                 document.getElementById('kpiUniqueItems').innerText = cachedSalesData.length;
@@ -565,48 +550,7 @@
             }
         }
 
-
-                cachedSalesData = Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
-
-                // KPI कार्ड्स अपडेट करें
-                document.getElementById('kpiTotalRevenue').innerText = '₹' + grandTotalSales.toFixed(2);
-                document.getElementById('kpiTotalQty').innerText = grandTotalQty;
-                document.getElementById('kpiUniqueItems').innerText = cachedSalesData.length;
-
-                tbody.innerHTML = '';
-                if (cachedSalesData.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">इस अवधि में कोई बिक्री रिकॉर्ड नहीं मिला।</td></tr>';
-                    return;
-                }
-
-                cachedSalesData.forEach((p, index) => {
-                    const avgPrice = p.qty > 0 ? (p.revenue / p.qty).toFixed(1) : '0';
-                    const percentage = grandTotalSales > 0 ? ((p.revenue / grandTotalSales) * 100).toFixed(1) : 0;
-
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${index + 1}</td>
-                        <td><b>${p.name}</b></td>
-                        <td>${p.qty}</td>
-                        <td>₹${avgPrice}</td>
-                        <td><b>₹${p.revenue.toFixed(2)}</b></td>
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                                <div style="flex: 1; background: #e2e8f0; height: 6px; border-radius: 3px;">
-                                    <div style="background: #0284c7; width: ${percentage}%; height: 6px; border-radius: 3px;"></div>
-                                </div>
-                                <span style="font-size: 11px; color: #64748b;">${percentage}%</span>
-                            </div>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">लोड एरर: ${err.message}</td></tr>`;
-            }
-        }
-
-        // ================= 3. एक्सेल एक्सपोर्ट (Excel / CSV) =================
+        // ================= 3. एक्सेल एक्सपोर्ट =================
         function exportSalesToExcel() {
             if (cachedSalesData.length === 0) {
                 alert('डाउनलोड करने के लिए कोई बिक्री डेटा नहीं है!');
@@ -646,7 +590,7 @@
             XLSX.writeFile(workbook, `Ration_Demand_${new Date().toISOString().slice(0, 10)}.xlsx`);
         }
 
-        // ================= 4. प्रिंट व PDF एक्सपोर्ट (हिंदी फॉन्ट सुरक्षित) =================
+        // ================= 4. प्रिंट व PDF एक्सपोर्ट =================
         function printReport(elementId, title) {
             const printContent = document.getElementById(elementId).innerHTML;
             const originalContent = document.body.innerHTML;
@@ -661,7 +605,7 @@
             document.body.innerHTML = printHeader + printContent;
             window.print();
             document.body.innerHTML = originalContent;
-            location.reload(); // स्थिति बहाल करने के लिए
+            location.reload();
         }
 
         // ================= 5. राशन मांग लिस्ट =================
@@ -677,7 +621,7 @@
             try {
                 const res = await fetch(url, { headers: apiHeaders });
                 const data = await res.json();
-                cachedRationData = data || [];
+                cachedRationData = Array.isArray(data) ? data : [];
                 tbody.innerHTML = '';
 
                 if (cachedRationData.length > 0) {
