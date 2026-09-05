@@ -457,7 +457,7 @@
             } catch (err) { showMessage("डिलीट एरर: " + err.message, true); }
         }
 
-        // ================= 2. प्रोडक्ट वाइज सेल एनालिटिक्स (sales_reports टेबल) =================
+        // ================= 2. प्रोडक्ट वाइज सेल एनालिटिक्स =================
         async function fetchProductWiseSales() {
             const hotel = document.getElementById('salesHotelFilter').value;
             const sDate = document.getElementById('salesStartDate').value;
@@ -466,46 +466,59 @@
 
             tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">डेटा लोड हो रहा है...</td></tr>';
 
-            let url = `${SUPABASE_URL}/rest/v1/sales_reports?select=*&order=created_at.desc`;
-            if (hotel !== 'ALL') url += `&store_code=eq.${hotel}`;
-            if (sDate) url += `&created_at=gte.${sDate}T00:00:00`;
-            if (eDate) url += `&created_at=lte.${eDate}T23:59:59`;
+            let url = `${SUPABASE_URL}/rest/v1/sales_reports?select=*`;
+            if (hotel !== 'ALL') {
+                url += `&store_code=eq.${hotel}`;
+            }
 
             try {
                 const res = await fetch(url, { headers: apiHeaders });
                 const rawData = await res.json();
 
                 if (!res.ok || (rawData && !Array.isArray(rawData))) {
-                    const errMsg = rawData.message || rawData.error || 'sales_reports टेबल लोड नहीं हो सकी';
+                    const errMsg = rawData.message || rawData.error || 'sales_reports लोड नहीं हो सकी';
                     tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;"><b>लोड एरर:</b> ${errMsg}</td></tr>`;
                     return;
                 }
 
-                const salesList = rawData;
+                let salesList = rawData;
+
+                // तारीख फ़िल्टरिंग
+                if (sDate || eDate) {
+                    salesList = salesList.filter(sale => {
+                        const rawDate = sale.date || sale.report_date || sale.created_at || sale.timestamp || sale.sale_date;
+                        if (!rawDate) return true;
+                        const itemDateStr = String(rawDate).slice(0, 10);
+                        if (sDate && itemDateStr < sDate) return false;
+                        if (eDate && itemDateStr > eDate) return false;
+                        return true;
+                    });
+                }
+
                 const productMap = {};
                 let grandTotalSales = 0;
                 let grandTotalQty = 0;
 
                 salesList.forEach(sale => {
-                    let items = sale.items || sale.order_items || sale.bill_items || sale.cart || [];
+                    let items = sale.items || sale.order_items || sale.bill_items || sale.cart || sale.dishes || [];
                     if (typeof items === 'string') {
                         try { items = JSON.parse(items); } catch (_) { items = []; }
                     }
 
                     if (!Array.isArray(items) || items.length === 0) {
-                        if (sale.item_name || sale.name) {
+                        if (sale.item_name || sale.product_name || sale.name) {
                             items = [{
-                                name: sale.item_name || sale.name,
+                                name: sale.item_name || sale.product_name || sale.name,
                                 qty: sale.quantity || sale.qty || 1,
                                 price: sale.price || sale.rate || 0,
-                                total: sale.total || sale.amount || 0
+                                total: sale.total || sale.amount || sale.total_amount || 0
                             }];
                         }
                     }
 
                     if (Array.isArray(items)) {
                         items.forEach(it => {
-                            const name = it.name || it.item_name || 'अन्य डिश';
+                            const name = it.name || it.item_name || it.product_name || 'अन्य डिश';
                             const qty = Number(it.qty || it.quantity || 1);
                             const price = Number(it.price || it.rate || 0);
                             const lineTotal = (qty * price) || Number(it.total || it.amount || 0);
@@ -561,7 +574,7 @@
             }
         }
 
-        // ================= 3. एक्सेल एक्सपोर्ट (Excel) =================
+        // ================= 3. एक्सेल एक्सपोर्ट =================
         function exportSalesToExcel() {
             if (cachedSalesData.length === 0) {
                 alert('डाउनलोड करने के लिए कोई बिक्री डेटा नहीं है!');
