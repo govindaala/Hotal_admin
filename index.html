@@ -466,27 +466,32 @@
 
             tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">डेटा लोड हो रहा है...</td></tr>';
 
-            let url = `${SUPABASE_URL}/rest/v1/sales_reports?select=*`;
-            if (hotel !== 'ALL') {
-                url += `&store_code=eq.${hotel}`;
-            }
-
             try {
-                const res = await fetch(url, { headers: apiHeaders });
-                const rawData = await res.json();
+                const [salesRes, kotsRes] = await Promise.all([
+                    fetch(`${SUPABASE_URL}/rest/v1/sales_reports?select=*`, { headers: apiHeaders }),
+                    fetch(`${SUPABASE_URL}/rest/v1/hotel_kots?select=*`, { headers: apiHeaders })
+                ]);
 
-                if (!res.ok || (rawData && !Array.isArray(rawData))) {
-                    const errMsg = rawData.message || rawData.error || 'sales_reports लोड नहीं हो सकी';
-                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;"><b>लोड एरर:</b> ${errMsg}</td></tr>`;
-                    return;
+                const salesData = salesRes.ok ? await salesRes.json() : [];
+                const kotsData = kotsRes.ok ? await kotsRes.json() : [];
+
+                let allRecords = [
+                    ...(Array.isArray(salesData) ? salesData : []),
+                    ...(Array.isArray(kotsData) ? kotsData : [])
+                ];
+
+                // 1. स्टोर कोड फ़िल्टरिंग
+                if (hotel !== 'ALL') {
+                    allRecords = allRecords.filter(item => {
+                        const code = item.store_code || item.restaurant_id || item.hotel_id || item.storeCode;
+                        return String(code).trim().toUpperCase() === String(hotel).trim().toUpperCase();
+                    });
                 }
 
-                let salesList = rawData;
-
-                // तारीख फ़िल्टरिंग
+                // 2. तारीख फ़िल्टरिंग
                 if (sDate || eDate) {
-                    salesList = salesList.filter(sale => {
-                        const rawDate = sale.date || sale.report_date || sale.created_at || sale.timestamp || sale.sale_date;
+                    allRecords = allRecords.filter(item => {
+                        const rawDate = item.date || item.created_at || item.report_date || item.timestamp || item.sale_date;
                         if (!rawDate) return true;
                         const itemDateStr = String(rawDate).slice(0, 10);
                         if (sDate && itemDateStr < sDate) return false;
@@ -499,19 +504,19 @@
                 let grandTotalSales = 0;
                 let grandTotalQty = 0;
 
-                salesList.forEach(sale => {
-                    let items = sale.items || sale.order_items || sale.bill_items || sale.cart || sale.dishes || [];
+                allRecords.forEach(record => {
+                    let items = record.items || record.order_items || record.bill_items || record.cart || record.dishes || [];
                     if (typeof items === 'string') {
                         try { items = JSON.parse(items); } catch (_) { items = []; }
                     }
 
                     if (!Array.isArray(items) || items.length === 0) {
-                        if (sale.item_name || sale.product_name || sale.name) {
+                        if (record.item_name || record.product_name || record.name) {
                             items = [{
-                                name: sale.item_name || sale.product_name || sale.name,
-                                qty: sale.quantity || sale.qty || 1,
-                                price: sale.price || sale.rate || 0,
-                                total: sale.total || sale.amount || sale.total_amount || 0
+                                name: record.item_name || record.product_name || record.name,
+                                qty: record.quantity || record.qty || 1,
+                                price: record.price || record.rate || 0,
+                                total: record.total || record.amount || 0
                             }];
                         }
                     }
@@ -543,7 +548,7 @@
 
                 tbody.innerHTML = '';
                 if (cachedSalesData.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">इस चुनी गई अवधि में कोई बिक्री रिकॉर्ड नहीं मिला।</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">इस होटल या अवधि में कोई बिक्री रिकॉर्ड नहीं मिला।</td></tr>';
                     return;
                 }
 
