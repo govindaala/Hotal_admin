@@ -3,85 +3,203 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>सुपर एडमिन - होटल मैनेजमेंट</title>
+    <title>सुपर एडमिन - होटल मैनेजमेंट व एनालिटिक्स</title>
+    <!-- Excel (XLSX) लाइब्रेरी हिंदी UTF-8 सपोर्ट के साथ -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 16px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; }
-        label { font-weight: 600; color: #1e293b; }
-        input { padding: 10px; width: 100%; box-sizing: border-box; margin-top: 5px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 16px; color: #1e293b; }
+        .container { max-width: 1250px; margin: 0 auto; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.07); margin-bottom: 24px; border: 1px solid #e2e8f0; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } }
+        .form-group { margin-bottom: 10px; }
+        label { font-weight: 600; color: #334155; font-size: 13px; }
+        label span { color: #ef4444; }
+        input, select, textarea { padding: 9px; width: 100%; box-sizing: border-box; margin-top: 4px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; }
+        input:focus, select:focus { border-color: #0284c7; }
+        
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
         th { background: #0f172a; color: white; }
-        .btn { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; font-size: 13px; }
+        tr:hover td { background: #f8fafc; }
+
+        /* Buttons */
+        .btn { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; font-size: 13px; transition: 0.2s; }
         .btn-green { background: #10b981; }
+        .btn-green:hover { background: #059669; }
         .btn-red { background: #ef4444; }
         .btn-dark-red { background: #991b1b; }
-        .btn-blue { background: #3b82f6; }
-        .btn-small { padding: 4px 8px; font-size: 12px; margin-left: 6px; background: #f59e0b; border-radius: 4px; }
+        .btn-blue { background: #0284c7; }
+        .btn-orange { background: #ea580c; color: white; }
+        .btn-secondary { background: #64748b; }
+        .btn-excel { background: #15803d; }
+        .btn-pdf { background: #dc2626; }
+        .btn-small { padding: 4px 8px; font-size: 11px; border-radius: 4px; }
+
+        /* KPI Box */
+        .kpi-row { display: flex; gap: 15px; margin-bottom: 14px; }
+        .kpi-box { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center; }
+        .kpi-title { font-size: 12px; color: #64748b; font-weight: bold; }
+        .kpi-val { font-size: 18px; font-weight: bold; margin-top: 4px; color: #0f172a; }
+
+        .filter-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 14px; }
+        .filter-item { flex: 1; min-width: 160px; }
+
         #statusAlert { display: none; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; font-size: 14px; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
-        .modal-content { background: white; margin: 8% auto; padding: 20px; width: 85%; max-width: 700px; max-height: 80vh; overflow-y: auto; border-radius: 10px; }
+        .modal-content { background: white; margin: 5% auto; padding: 20px; width: 85%; max-width: 750px; max-height: 85vh; overflow-y: auto; border-radius: 10px; }
         .close { float: right; font-size: 26px; cursor: pointer; color: red; font-weight: bold; }
+
+        /* Print Style for Crisp PDF & Hindi Fonts */
+        @media print {
+            body { background: white; padding: 0; }
+            .no-print, header, .btn, .filter-row, #statusAlert { display: none !important; }
+            .card { box-shadow: none; border: none; padding: 0; margin-bottom: 30px; }
+            table { width: 100%; border: 1px solid #333; }
+            th { background: #333 !important; color: white !important; }
+            th, td { border: 1px solid #ddd; padding: 8px; font-size: 12px; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 style="text-align: center; color: #0f172a; margin-bottom: 20px;">सुपर एडमिन कंट्रोल पैनल</h1>
+        <h1 class="no-print" style="text-align: center; color: #0f172a; margin-bottom: 20px;">सुपर एडमिन कंट्रोल व एनालिटिक्स पैनल</h1>
 
-        <div id="statusAlert"></div>
-        
-        <!-- 1. नया होटल रजिस्ट्रेशन फॉर्म -->
-        <div class="card">
-            <h2>🏨 नया होटल रजिस्टर / अपडेट करें</h2>
-            <div class="form-group">
-                <label>होटल का नाम:</label>
-                <input type="text" id="hotelName" placeholder="उदा. राजपूताना भोजनालय">
+        <div id="statusAlert" class="no-print"></div>
+
+        <!-- 1. होटल रजिस्ट्रेशन व एडिट फॉर्म -->
+        <div class="card no-print">
+            <h2 id="formHeading">🏨 नया होटल रजिस्टर / अपडेट करें</h2>
+            <input type="hidden" id="editingStoreCode" value="">
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>होटल का नाम: <span>*</span></label>
+                    <input type="text" id="hotelName" placeholder="उदा. राजपूताना भोजनालय">
+                </div>
+                <div class="form-group">
+                    <label>स्टोर कोड (Store ID): <span>*</span></label>
+                    <input type="text" id="storeCode" placeholder="उदा. 111 या RAJ01">
+                </div>
+                <div class="form-group">
+                    <label>मास्टर लॉगिन पिन (PIN): <span>*</span></label>
+                    <input type="text" id="masterPin" placeholder="उदा. 1234">
+                </div>
+                <div class="form-group">
+                    <label>कुल टेबल्स:</label>
+                    <input type="number" id="totalTables" value="10">
+                </div>
+                <div class="form-group">
+                    <label>मोबाइल नंबर:</label>
+                    <input type="text" id="phone" placeholder="उदा. 9876543210">
+                </div>
+                <div class="form-group">
+                    <label>GSTIN नंबर:</label>
+                    <input type="text" id="gstNumber" placeholder="उदा. 22AAAAA0000A1Z5">
+                </div>
+                <div class="form-group">
+                    <label>FSSAI लाइसेंस नंबर:</label>
+                    <input type="text" id="fssaiNumber" placeholder="14 अंकों का नंबर">
+                </div>
+                <div class="form-group">
+                    <label>बिल फुटर संदेश:</label>
+                    <input type="text" id="footerMessage" placeholder="उदा. धन्यवाद! फिर पधारें!">
+                </div>
             </div>
+
             <div class="form-group">
-                <label>स्टोर कोड:</label>
-                <input type="text" id="storeCode" placeholder="उदा. 111">
+                <label>होटल का पूरा पता:</label>
+                <input type="text" id="address" placeholder="दुकान/स्थान, शहर, राज्य">
             </div>
-            <div class="form-group">
-                <label>मास्टर पिन (4-6 अंक):</label>
-                <input type="text" id="masterPin" placeholder="उदा. 123456">
+
+            <div style="margin-top: 10px; display: flex; gap: 10px;">
+                <button class="btn btn-green" id="submitBtn" onclick="registerHotel()">होटल सुरक्षित करें</button>
+                <button class="btn btn-secondary" id="cancelEditBtn" onclick="cancelEdit()" style="display: none;">रद्द करें</button>
             </div>
-            <div class="form-group">
-                <label>कुल टेबल्स:</label>
-                <input type="number" id="totalTables" placeholder="उदा. 10" value="10">
-            </div>
-            <button class="btn btn-green" id="submitBtn" onclick="registerHotel()" style="padding: 12px 20px; font-size: 15px;">होटल रजिस्टर करें</button>
         </div>
 
-        <!-- 2. रजिस्टर्ड होटल लिस्ट -->
-        <div class="card">
-            <h2>📋 सभी रजिस्टर्ड रेस्टोरेंट / होटल</h2>
+        <!-- 2. प्रोडक्ट वाइज सेल एनालिटिक्स सेक्शन (NEW) -->
+        <div class="card" id="salesSection">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h2>📊 प्रोडक्ट-वाइज बिक्री रिपोर्ट (Sales Analytics)</h2>
+                <div class="no-print" style="display: flex; gap: 8px;">
+                    <button class="btn btn-excel" onclick="exportSalesToExcel()">📥 एक्सेल डाउनलोड</button>
+                    <button class="btn btn-pdf" onclick="printReport('salesSection', 'बिक्री रिपोर्ट')">🖨️ PDF / प्रिंट</button>
+                </div>
+            </div>
+
+            <!-- फ़िल्टर बार -->
+            <div class="filter-row no-print">
+                <div class="filter-item">
+                    <label>होटल चुनें:</label>
+                    <select id="salesHotelFilter" onchange="fetchProductWiseSales()">
+                        <option value="ALL">सभी होटल (All Stores)</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label>आरंभ दिनांक (From):</label>
+                    <input type="date" id="salesStartDate" onchange="fetchProductWiseSales()">
+                </div>
+                <div class="filter-item">
+                    <label>समाप्ति दिनांक (To):</label>
+                    <input type="date" id="salesEndDate" onchange="fetchProductWiseSales()">
+                </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="kpi-row">
+                <div class="kpi-box">
+                    <div class="kpi-title">कुल बिक्री रकम</div>
+                    <div class="kpi-val" id="kpiTotalRevenue" style="color: #15803d;">₹0.00</div>
+                </div>
+                <div class="kpi-box">
+                    <div class="kpi-title">कुल बिकी मात्रा (Items)</div>
+                    <div class="kpi-val" id="kpiTotalQty" style="color: #0284c7;">0</div>
+                </div>
+                <div class="kpi-box">
+                    <div class="kpi-title">यूनिक डिशेज़/प्रोडक्ट्स</div>
+                    <div class="kpi-val" id="kpiUniqueItems" style="color: #ea580c;">0</div>
+                </div>
+            </div>
+
+            <!-- सेल टेबल -->
             <div style="overflow-x: auto;">
-                <table id="restaurantTable">
+                <table id="salesTable">
                     <thead>
                         <tr>
-                            <th>स्टोर कोड</th>
-                            <th>होटल का नाम</th>
-                            <th>टेबल्स</th>
-                            <th>मास्टर पिन</th>
-                            <th>स्टेटस</th>
-                            <th>एक्शन (ब्लॉक / डिलीट)</th>
-                            <th>राशन मांग</th>
+                            <th>#</th>
+                            <th>आइटम / प्रोडक्ट का नाम</th>
+                            <th>कुल बिकी मात्रा (Qty)</th>
+                            <th>औसत भाव (₹)</th>
+                            <th>कुल बिक्री (₹)</th>
+                            <th>योगदान (%)</th>
                         </tr>
                     </thead>
-                    <tbody id="restaurantBody">
-                        <tr><td colspan="7" style="text-align: center; color: #64748b;">डेटा लोड हो रहा है...</td></tr>
+                    <tbody id="salesBody">
+                        <tr><td colspan="6" style="text-align: center; color: #64748b;">डेटा लोड करने के लिए दिनांक चुनें...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
         <!-- 3. कंबाइंड राशन मांग लिस्ट -->
-        <div class="card">
-            <h2>🛒 सभी होटलों की कुल राशन मांग</h2>
-            <label><b>तारीख चुनें: </b></label>
-            <input type="date" id="dateFilter" onchange="loadAllRationDemands()" style="width: 220px; display: inline-block; margin-bottom: 12px;">
+        <div class="card" id="rationSection">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h2>🛒 सभी होटलों की कुल राशन मांग</h2>
+                <div class="no-print" style="display: flex; gap: 8px;">
+                    <button class="btn btn-excel" onclick="exportRationToExcel()">📥 एक्सेल डाउनलोड</button>
+                    <button class="btn btn-pdf" onclick="printReport('rationSection', 'राशन मांग सूची')">🖨️ PDF / प्रिंट</button>
+                </div>
+            </div>
+
+            <div class="filter-row no-print">
+                <div class="filter-item" style="max-width: 250px;">
+                    <label>तारीख चुनें:</label>
+                    <input type="date" id="dateFilter" onchange="loadAllRationDemands()">
+                </div>
+            </div>
+
             <div style="overflow-x: auto;">
                 <table id="allRationTable">
                     <thead>
@@ -98,10 +216,34 @@
                 </table>
             </div>
         </div>
+
+        <!-- 4. रजिस्टर्ड होटल लिस्ट -->
+        <div class="card no-print">
+            <h2>📋 सभी रजिस्टर्ड रेस्टोरेंट / होटल</h2>
+            <div style="overflow-x: auto;">
+                <table id="restaurantTable">
+                    <thead>
+                        <tr>
+                            <th>स्टोर कोड</th>
+                            <th>होटल का नाम व पता</th>
+                            <th>टेबल्स</th>
+                            <th>लॉगिन पिन</th>
+                            <th>GST / FSSAI</th>
+                            <th>स्टेटस</th>
+                            <th>एक्शन (एडिट / डिलीट)</th>
+                            <th>राशन मांग</th>
+                        </tr>
+                    </thead>
+                    <tbody id="restaurantBody">
+                        <tr><td colspan="8" style="text-align: center; color: #64748b;">डेटा लोड हो रहा है...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- राशन पॉपअप मोडल -->
-    <div id="rationModal" class="modal">
+    <div id="rationModal" class="modal no-print">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
             <h2 id="modalTitle">राशन लिस्ट</h2>
@@ -124,6 +266,10 @@
             'Content-Type': 'application/json'
         };
 
+        let cachedHotels = [];
+        let cachedSalesData = [];
+        let cachedRationData = [];
+
         function showMessage(text, isError = false) {
             const alertBox = document.getElementById('statusAlert');
             alertBox.style.display = 'block';
@@ -134,14 +280,21 @@
             setTimeout(() => { alertBox.style.display = 'none'; }, 6000);
         }
 
+        // ================= 1. होटल मैनेजमेंट =================
         async function registerHotel() {
+            const editingCode = document.getElementById('editingStoreCode').value.trim();
             const name = document.getElementById('hotelName').value.trim();
             const code = document.getElementById('storeCode').value.trim().toUpperCase();
             const pin = document.getElementById('masterPin').value.trim();
-            const tables = document.getElementById('totalTables').value.trim();
+            const tables = parseInt(document.getElementById('totalTables').value.trim()) || 10;
+            const phone = document.getElementById('phone').value.trim() || null;
+            const address = document.getElementById('address').value.trim() || null;
+            const gst = document.getElementById('gstNumber').value.trim() || null;
+            const fssai = document.getElementById('fssaiNumber').value.trim() || null;
+            const footer = document.getElementById('footerMessage').value.trim() || null;
 
-            if (!name || !code || !pin || !tables) {
-                alert("कृपया सभी 4 फ़ील्ड्स भरें!");
+            if (!name || !code || !pin) {
+                alert("कृपया होटल का नाम, स्टोर कोड और पिन अनिवार्य रूप से भरें!");
                 return;
             }
 
@@ -149,152 +302,340 @@
             btn.innerText = "सेव हो रहा है...";
             btn.disabled = true;
 
+            const payload = {
+                store_code: code,
+                name: name,
+                pin: pin,
+                master_pin: pin,
+                total_tables: tables,
+                phone: phone,
+                address: address,
+                gst_number: gst,
+                fssai_number: fssai,
+                footer_message: footer,
+                is_active: true
+            };
+
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?on_conflict=store_code`, {
-                    method: 'POST',
-                    headers: {
-                        ...apiHeaders,
-                        'Prefer': 'resolution=merge-duplicates,return=representation'
-                    },
-                    body: JSON.stringify([{
-                        store_code: code,
-                        name: name,
-                        master_pin: pin,
-                        total_tables: parseInt(tables),
-                        is_active: true
-                    }])
-                });
+                let res;
+                if (editingCode) {
+                    res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?store_code=eq.${editingCode}`, {
+                        method: 'PATCH',
+                        headers: { ...apiHeaders, 'Prefer': 'return=representation' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?on_conflict=store_code`, {
+                        method: 'POST',
+                        headers: { ...apiHeaders, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+                        body: JSON.stringify([payload])
+                    });
+                }
 
                 if (!res.ok) {
                     const err = await res.json();
-                    throw new Error(err.message || 'डेटा सेव नहीं हुआ');
+                    throw new Error(err.message || 'डेटा सुरक्षित नहीं हुआ');
                 }
 
-                showMessage(`होटल [${code}] सफलतापूर्वक रजिस्टर/अपडेट हो गया!`);
-                document.getElementById('hotelName').value = '';
-                document.getElementById('storeCode').value = '';
-                document.getElementById('masterPin').value = '';
+                showMessage(`होटल [${code}] का विवरण सुरक्षित हो गया!`);
+                cancelEdit();
                 await loadRestaurants();
             } catch (err) {
                 showMessage("एरर: " + err.message, true);
             } finally {
-                btn.innerText = "होटल रजिस्टर करें";
+                btn.innerText = "होटल सुरक्षित करें";
                 btn.disabled = false;
             }
         }
 
+        function startEdit(code) {
+            const h = cachedHotels.find(item => item.store_code === code);
+            if (!h) return;
+
+            document.getElementById('editingStoreCode').value = h.store_code;
+            document.getElementById('hotelName').value = h.name || '';
+            document.getElementById('storeCode').value = h.store_code || '';
+            document.getElementById('masterPin').value = h.pin || h.master_pin || '';
+            document.getElementById('totalTables').value = h.total_tables || 10;
+            document.getElementById('phone').value = h.phone || '';
+            document.getElementById('address').value = h.address || '';
+            document.getElementById('gstNumber').value = h.gst_number || '';
+            document.getElementById('fssaiNumber').value = h.fssai_number || '';
+            document.getElementById('footerMessage').value = h.footer_message || '';
+
+            document.getElementById('formHeading').innerText = `✏️ होटल एडिट करें (${h.store_code})`;
+            document.getElementById('submitBtn').innerText = 'अपडेट करें';
+            document.getElementById('cancelEditBtn').style.display = 'inline-block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            document.getElementById('editingStoreCode').value = '';
+            document.getElementById('hotelName').value = '';
+            document.getElementById('storeCode').value = '';
+            document.getElementById('masterPin').value = '';
+            document.getElementById('totalTables').value = '10';
+            document.getElementById('phone').value = '';
+            document.getElementById('address').value = '';
+            document.getElementById('gstNumber').value = '';
+            document.getElementById('fssaiNumber').value = '';
+            document.getElementById('footerMessage').value = '';
+
+            document.getElementById('formHeading').innerText = '🏨 नया होटल रजिस्टर / अपडेट करें';
+            document.getElementById('submitBtn').innerText = 'होटल सुरक्षित करें';
+            document.getElementById('cancelEditBtn').style.display = 'none';
+        }
+
         async function loadRestaurants() {
             const tbody = document.getElementById('restaurantBody');
+            const selectFilter = document.getElementById('salesHotelFilter');
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?select=*&order=created_at.desc`, {
                     headers: apiHeaders
                 });
-
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.message || 'डेटा लोड नहीं हुआ');
-                }
-
                 const data = await res.json();
+                cachedHotels = data || [];
                 tbody.innerHTML = '';
+                selectFilter.innerHTML = '<option value="ALL">सभी होटल (All Stores)</option>';
 
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">अभी कोई होटल रजिस्टर नहीं है।</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">अभी कोई होटल रजिस्टर नहीं है।</td></tr>';
                     return;
                 }
 
                 data.forEach(r => {
+                    // ड्रॉपडाउन फ़िल्टर में जोड़ें
+                    const opt = document.createElement('option');
+                    opt.value = r.store_code;
+                    opt.innerText = `${r.name} (${r.store_code})`;
+                    selectFilter.appendChild(opt);
+
+                    // टेबल रो
+                    const pin = r.pin || r.master_pin || '-';
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td><b>${r.store_code}</b></td>
-                        <td>${r.name}</td>
-                        <td>${r.total_tables || 10}</td>
                         <td>
-                            <b>${r.master_pin}</b>
-                            <button class="btn btn-small" onclick="editMasterPin('${r.store_code}', '${r.master_pin}')">✏️ एडिट</button>
+                            <div style="font-weight: bold; color: #0f172a;">${r.name}</div>
+                            <div style="font-size: 11px; color: #64748b;">${r.address || r.phone || '-'}</div>
+                        </td>
+                        <td>${r.total_tables || 10}</td>
+                        <td><code>${pin}</code></td>
+                        <td>
+                            <div style="font-size: 11px;">GST: ${r.gst_number || '-'}</div>
+                            <div style="font-size: 11px;">FSSAI: ${r.fssai_number || '-'}</div>
                         </td>
                         <td style="color: ${r.is_active ? 'green' : 'red'}; font-weight: bold;">${r.is_active ? 'चालू' : 'ब्लॉक'}</td>
                         <td>
-                            <button class="btn ${r.is_active ? 'btn-red' : 'btn-green'}" onclick="toggleStatus('${r.store_code}', ${r.is_active})">
+                            <button class="btn btn-orange btn-small" onclick="startEdit('${r.store_code}')">✏️ एडिट</button>
+                            <button class="btn ${r.is_active ? 'btn-red' : 'btn-green'} btn-small" style="margin-left: 4px;" onclick="toggleStatus('${r.store_code}', ${r.is_active})">
                                 ${r.is_active ? 'ब्लॉक' : 'चालू'}
                             </button>
-                            <button class="btn btn-dark-red" style="margin-left: 6px;" onclick="deleteHotel('${r.store_code}', '${r.name}')">
-                                🗑️ डिलीट
-                            </button>
+                            <button class="btn btn-dark-red btn-small" style="margin-left: 4px;" onclick="deleteHotel('${r.store_code}', '${r.name}')">🗑️</button>
                         </td>
                         <td>
-                            <button class="btn btn-blue" onclick="viewSingleRestaurantRation('${r.store_code}')">राशन देखें</button>
+                            <button class="btn btn-blue btn-small" onclick="viewSingleRestaurantRation('${r.store_code}')">राशन</button>
                         </td>
                     `;
                     tbody.appendChild(tr);
                 });
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">लोड एरर: ${err.message}</td></tr>`;
-            }
-        }
-
-        async function deleteHotel(storeCode, hotelName) {
-            const check = confirm(`क्या आप सचमुच होटल "${hotelName}" (कोड: ${storeCode}) को हमेशा के लिए डिलीट करना चाहते हैं?\n\nचेतावनी: इससे होटल का सारा स्टाफ और राशन डेटा भी स्थायी रूप से हट जाएगा!`);
-            if (!check) return;
-
-            try {
-                // 1. होटल के स्टाफ को डिलीट करें
-                await fetch(`${SUPABASE_URL}/rest/v1/hotel_staff?store_code=eq.${storeCode}`, {
-                    method: 'DELETE',
-                    headers: apiHeaders
-                });
-
-                // 2. होटल की राशन मांग को डिलीट करें
-                await fetch(`${SUPABASE_URL}/rest/v1/ration_demands?store_code=eq.${storeCode}`, {
-                    method: 'DELETE',
-                    headers: apiHeaders
-                });
-
-                // 3. मुख्य होटल रिकॉर्ड को डिलीट करें
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?store_code=eq.${storeCode}`, {
-                    method: 'DELETE',
-                    headers: apiHeaders
-                });
-
-                if (!res.ok) throw new Error('होटल डिलीट नहीं हो सका');
-
-                showMessage(`होटल [${storeCode}] और उसका सारा डेटा डिलीट कर दिया गया!`);
-                await loadRestaurants();
-                await loadAllRationDemands();
-            } catch (err) {
-                showMessage("डिलीट एरर: " + err.message, true);
-            }
-        }
-
-        async function editMasterPin(storeCode, currentPin) {
-            const newPin = prompt(`[${storeCode}] के लिए नया मास्टर पिन डालें:`, currentPin);
-            if (newPin && newPin.trim()) {
-                try {
-                    const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?store_code=eq.${storeCode}`, {
-                        method: 'PATCH',
-                        headers: apiHeaders,
-                        body: JSON.stringify({ master_pin: newPin.trim() })
-                    });
-                    if (!res.ok) throw new Error('पिन अपडेट विफल');
-                    showMessage(`स्टोर [${storeCode}] का पिन बदल गया!`);
-                    loadRestaurants();
-                } catch (e) {
-                    alert(e.message);
-                }
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red;">लोड एरर: ${err.message}</td></tr>`;
             }
         }
 
         async function toggleStatus(storeCode, currentStatus) {
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?store_code=eq.${storeCode}`, {
+                await fetch(`${SUPABASE_URL}/rest/v1/restaurants?store_code=eq.${storeCode}`, {
                     method: 'PATCH',
                     headers: apiHeaders,
                     body: JSON.stringify({ is_active: !currentStatus })
                 });
-                if (!res.ok) throw new Error('स्टेटस अपडेट विफल');
                 loadRestaurants();
+            } catch (e) { alert(e.message); }
+        }
+
+        async function deleteHotel(storeCode, hotelName) {
+            if (!confirm(`क्या आप "${hotelName}" (${storeCode}) को डिलीट करना चाहते हैं?`)) return;
+            try {
+                await fetch(`${SUPABASE_URL}/rest/v1/hotel_staff?store_code=eq.${storeCode}`, { method: 'DELETE', headers: apiHeaders });
+                await fetch(`${SUPABASE_URL}/rest/v1/ration_demands?store_code=eq.${storeCode}`, { method: 'DELETE', headers: apiHeaders });
+                await fetch(`${SUPABASE_URL}/rest/v1/restaurants?store_code=eq.${storeCode}`, { method: 'DELETE', headers: apiHeaders });
+                showMessage(`होटल [${storeCode}] डिलीट हो गया!`);
+                loadRestaurants();
+            } catch (err) { showMessage("डिलीट एरर: " + err.message, true); }
+        }
+
+        // ================= 2. प्रोडक्ट वाइज सेल एनालिटिक्स =================
+        async function fetchProductWiseSales() {
+            const hotel = document.getElementById('salesHotelFilter').value;
+            const sDate = document.getElementById('salesStartDate').value;
+            const eDate = document.getElementById('salesEndDate').value;
+            const tbody = document.getElementById('salesBody');
+
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">डेटा लोड हो रहा है...</td></tr>';
+
+            let url = `${SUPABASE_URL}/rest/v1/orders?select=items,total,created_at,store_code&order=created_at.desc`;
+            if (hotel !== 'ALL') url += `&store_code=eq.${hotel}`;
+            if (sDate) url += `&created_at=gte.${sDate}T00:00:00`;
+            if (eDate) url += `&created_at=lte.${eDate}T23:59:59`;
+
+            try {
+                const res = await fetch(url, { headers: apiHeaders });
+                const orders = await res.json();
+
+                const productMap = {};
+                let grandTotalSales = 0;
+                let grandTotalQty = 0;
+
+                orders.forEach(ord => {
+                    let items = ord.items;
+                    if (typeof items === 'string') {
+                        try { items = JSON.parse(items); } catch (_) { items = []; }
+                    }
+                    if (Array.isArray(items)) {
+                        items.forEach(it => {
+                            const name = it.name || 'अन्य';
+                            const qty = Number(it.qty || it.quantity || 1);
+                            const price = Number(it.price || 0);
+                            const lineTotal = qty * price;
+
+                            if (!productMap[name]) {
+                                productMap[name] = { name: name, qty: 0, revenue: 0 };
+                            }
+                            productMap[name].qty += qty;
+                            productMap[name].revenue += lineTotal;
+
+                            grandTotalSales += lineTotal;
+                            grandTotalQty += qty;
+                        });
+                    }
+                });
+
+                cachedSalesData = Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
+
+                // KPI कार्ड्स अपडेट करें
+                document.getElementById('kpiTotalRevenue').innerText = '₹' + grandTotalSales.toFixed(2);
+                document.getElementById('kpiTotalQty').innerText = grandTotalQty;
+                document.getElementById('kpiUniqueItems').innerText = cachedSalesData.length;
+
+                tbody.innerHTML = '';
+                if (cachedSalesData.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">इस अवधि में कोई बिक्री रिकॉर्ड नहीं मिला।</td></tr>';
+                    return;
+                }
+
+                cachedSalesData.forEach((p, index) => {
+                    const avgPrice = p.qty > 0 ? (p.revenue / p.qty).toFixed(1) : '0';
+                    const percentage = grandTotalSales > 0 ? ((p.revenue / grandTotalSales) * 100).toFixed(1) : 0;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td><b>${p.name}</b></td>
+                        <td>${p.qty}</td>
+                        <td>₹${avgPrice}</td>
+                        <td><b>₹${p.revenue.toFixed(2)}</b></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <div style="flex: 1; background: #e2e8f0; height: 6px; border-radius: 3px;">
+                                    <div style="background: #0284c7; width: ${percentage}%; height: 6px; border-radius: 3px;"></div>
+                                </div>
+                                <span style="font-size: 11px; color: #64748b;">${percentage}%</span>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">लोड एरर: ${err.message}</td></tr>`;
+            }
+        }
+
+        // ================= 3. एक्सेल एक्सपोर्ट (Excel / CSV) =================
+        function exportSalesToExcel() {
+            if (cachedSalesData.length === 0) {
+                alert('डाउनलोड करने के लिए कोई बिक्री डेटा नहीं है!');
+                return;
+            }
+
+            const excelRows = cachedSalesData.map((item, idx) => ({
+                'क्रमांक': idx + 1,
+                'आइटम का नाम': item.name,
+                'कुल बिकी मात्रा (Qty)': item.qty,
+                'औसत भाव (₹)': (item.revenue / item.qty).toFixed(2),
+                'कुल बिक्री रकम (₹)': item.revenue.toFixed(2)
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Product_Sales");
+            XLSX.writeFile(workbook, `Product_Sales_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        }
+
+        function exportRationToExcel() {
+            if (cachedRationData.length === 0) {
+                alert('डाउनलोड करने के लिए कोई राशन डेटा नहीं है!');
+                return;
+            }
+
+            const excelRows = cachedRationData.map((r) => ({
+                'तारीख व समय': new Date(r.created_at).toLocaleString('hi-IN'),
+                'स्टोर कोड': r.store_code,
+                'सामग्री (Item)': r.item_name,
+                'मात्रा (Quantity)': r.quantity
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Ration_Demand");
+            XLSX.writeFile(workbook, `Ration_Demand_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        }
+
+        // ================= 4. प्रिंट व PDF एक्सपोर्ट (हिंदी फॉन्ट सुरक्षित) =================
+        function printReport(elementId, title) {
+            const printContent = document.getElementById(elementId).innerHTML;
+            const originalContent = document.body.innerHTML;
+
+            const printHeader = `
+                <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #000; padding-bottom:10px;">
+                    <h2 style="margin:0;">सुपर एडमिन - ${title}</h2>
+                    <p style="margin:4px 0 0 0; font-size:12px;">दिनांक: ${new Date().toLocaleDateString('hi-IN')} | होटल मैनेजमेंट सिस्टम</p>
+                </div>
+            `;
+
+            document.body.innerHTML = printHeader + printContent;
+            window.print();
+            document.body.innerHTML = originalContent;
+            location.reload(); // स्थिति बहाल करने के लिए
+        }
+
+        // ================= 5. राशन मांग लिस्ट =================
+        async function loadAllRationDemands() {
+            const tbody = document.getElementById('allRationBody');
+            const filterDate = document.getElementById('dateFilter').value;
+            let url = `${SUPABASE_URL}/rest/v1/ration_demands?select=*&order=created_at.desc`;
+
+            if (filterDate) {
+                url += `&created_at=gte.${filterDate}T00:00:00&created_at=lte.${filterDate}T23:59:59`;
+            }
+
+            try {
+                const res = await fetch(url, { headers: apiHeaders });
+                const data = await res.json();
+                cachedRationData = data || [];
+                tbody.innerHTML = '';
+
+                if (cachedRationData.length > 0) {
+                    cachedRationData.forEach(d => {
+                        const dateObj = new Date(d.created_at);
+                        tbody.innerHTML += `<tr><td>${dateObj.toLocaleString('hi-IN')}</td><td><b>${d.store_code}</b></td><td>${d.item_name}</td><td>${d.quantity}</td></tr>`;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">इस तारीख पर कोई राशन मांग नहीं है।</td></tr>';
+                }
             } catch (e) {
-                alert(e.message);
+                tbody.innerHTML = `<tr><td colspan="4" style="color:red;">लोड एरर: ${e.message}</td></tr>`;
             }
         }
 
@@ -312,8 +653,7 @@
                 tbody.innerHTML = '';
                 if (data && data.length > 0) {
                     data.forEach(d => {
-                        const dateObj = new Date(d.created_at);
-                        tbody.innerHTML += `<tr><td>${dateObj.toLocaleString('hi-IN')}</td><td>${d.item_name}</td><td>${d.quantity}</td></tr>`;
+                        tbody.innerHTML += `<tr><td>${new Date(d.created_at).toLocaleString('hi-IN')}</td><td>${d.item_name}</td><td>${d.quantity}</td></tr>`;
                     });
                 } else {
                     tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">कोई मांग दर्ज नहीं है।</td></tr>';
@@ -327,36 +667,15 @@
             document.getElementById('rationModal').style.display = 'none';
         }
 
-        async function loadAllRationDemands() {
-            const tbody = document.getElementById('allRationBody');
-            const filterDate = document.getElementById('dateFilter').value;
-            let url = `${SUPABASE_URL}/rest/v1/ration_demands?select=*&order=created_at.desc`;
-
-            if (filterDate) {
-                url += `&created_at=gte.${filterDate}T00:00:00&created_at=lte.${filterDate}T23:59:59`;
-            }
-
-            try {
-                const res = await fetch(url, { headers: apiHeaders });
-                const data = await res.json();
-                tbody.innerHTML = '';
-                if (data && data.length > 0) {
-                    data.forEach(d => {
-                        const dateObj = new Date(d.created_at);
-                        tbody.innerHTML += `<tr><td>${dateObj.toLocaleString('hi-IN')}</td><td><b>${d.store_code}</b></td><td>${d.item_name}</td><td>${d.quantity}</td></tr>`;
-                    });
-                } else {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">इस तारीख पर कोई राशन मांग नहीं है।</td></tr>';
-                }
-            } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="4" style="color:red;">लोड एरर: ${e.message}</td></tr>`;
-            }
-        }
-
         window.onload = () => {
-            document.getElementById('dateFilter').valueAsDate = new Date();
+            const todayStr = new Date().toISOString().slice(0, 10);
+            document.getElementById('dateFilter').value = todayStr;
+            document.getElementById('salesStartDate').value = todayStr;
+            document.getElementById('salesEndDate').value = todayStr;
+
             loadRestaurants();
             loadAllRationDemands();
+            fetchProductWiseSales();
         };
     </script>
 </body>
