@@ -3,427 +3,406 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>हलवाई मास्टर किराना व भट्ठी पर्ची कैलकुलेटर</title>
+  <title>हलवाई कच्ची किराना पर्ची सिस्टम</title>
   <style>
-    * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, Arial, sans-serif; }
-    body { margin: 0; padding: 12px; background: #f1f5f9; color: #1e293b; }
-    .container { max-width: 1100px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-    h1 { text-align: center; color: #b91c1c; margin: 0 0 15px 0; font-size: 22px; }
+    * { box-sizing: border-box; font-family: 'Noto Sans Devanagari', 'Segoe UI', Arial, sans-serif; }
+    body { margin: 0; padding: 12px; background: #e2e8f0; color: #111; }
+    .app-container { max-width: 1100px; margin: 0 auto; }
     
-    .settings-panel { background: #fff7ed; border: 1px solid #fdba74; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-    .form-group { display: flex; flex-direction: column; gap: 4px; }
-    .form-group label { font-size: 13px; font-weight: bold; color: #9a3412; }
-    .form-group input, .form-group select { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; background: #fff; }
+    /* कंट्रोल पैनल (प्रिंट में नहीं दिखेगा) */
+    .controls-panel { background: #fff; border-radius: 10px; padding: 16px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .panel-title { font-size: 18px; font-weight: bold; color: #b91c1c; margin-bottom: 12px; border-bottom: 2px solid #fee2e2; padding-bottom: 6px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 12px; }
+    .field-group { display: flex; flex-direction: column; gap: 4px; }
+    .field-group label { font-size: 13px; font-weight: bold; color: #334155; }
+    .field-group input, .field-group select { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
     
-    .category-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-    .pill { padding: 6px 14px; font-size: 13px; background: #e2e8f0; border: none; border-radius: 20px; cursor: pointer; font-weight: 500; }
-    .pill.active { background: #b91c1c; color: #fff; font-weight: bold; }
+    .dish-select-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 14px; }
+    .dish-tag-grid { display: flex; flex-wrap: wrap; gap: 8px; max-height: 180px; overflow-y: auto; padding: 4px; }
+    .dish-pill { display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #cbd5e1; padding: 5px 10px; border-radius: 6px; font-size: 13px; cursor: pointer; }
     
-    .dishes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; max-height: 260px; overflow-y: auto; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; margin-bottom: 15px; }
-    .dish-card { display: flex; align-items: center; gap: 8px; background: #fff; padding: 7px 10px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; font-size: 13px; }
-    .dish-card input { cursor: pointer; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    button.btn { padding: 10px 18px; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .btn-calc { background: #b91c1c; color: white; }
+    .btn-print { background: #1e293b; color: white; }
+    .btn-wa { background: #16a34a; color: white; }
+
+    /* असली पर्ची का हूबहू लेआउट */
+    .parchi-sheet { background: #fff; padding: 25px 20px; border: 3px double #111; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 0 auto; max-width: 1000px; }
+    .parchi-top-line { display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; border-bottom: 1px solid #111; padding-bottom: 4px; }
+    .parchi-main-head { text-align: center; margin: 8px 0; }
+    .halwai-name { font-size: 24px; font-weight: 900; letter-spacing: 0.5px; margin: 0; }
+    .halwai-sub { font-size: 13px; font-weight: 600; margin: 2px 0; }
+    .order-note { font-size: 12px; font-weight: bold; border-top: 1px solid #333; border-bottom: 1px solid #333; padding: 3px 0; margin: 6px 0 10px 0; }
     
-    .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-    button.btn { border: none; padding: 10px 18px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 6px; }
-    .btn-red { background: #b91c1c; color: white; }
-    .btn-blue { background: #0284c7; color: white; }
-    .btn-green { background: #16a34a; color: white; }
-    .btn-gray { background: #64748b; color: white; }
+    .client-info-box { font-size: 14px; font-weight: bold; line-height: 1.8; border: 1px solid #222; padding: 8px 12px; background: #fafafa; margin-bottom: 10px; }
+    .client-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
+    .dotted-fill { border-bottom: 1px dotted #111; padding: 0 6px; color: #b91c1c; }
     
-    .parchi-box { border: 2px solid #0f172a; padding: 15px; border-radius: 8px; background: #fff; }
-    .parchi-header { border-bottom: 2px dashed #0f172a; padding-bottom: 10px; margin-bottom: 12px; }
-    .parchi-title { font-size: 18px; font-weight: bold; color: #0f172a; }
-    .cat-head { background: #e2e8f0; padding: 6px 10px; font-weight: bold; font-size: 14px; margin-top: 15px; border-left: 5px solid #b91c1c; }
-    
-    table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-    th, td { border: 1px solid #cbd5e1; padding: 7px 10px; text-align: left; font-size: 13px; }
-    th { background: #f1f5f9; color: #334155; }
-    td strong { color: #0f172a; }
-    
+    .counts-banner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; background: #f1f5f9; border: 1px solid #333; padding: 6px; margin-bottom: 12px; font-size: 13px; font-weight: bold; text-align: center; }
+    .count-box { border-right: 1px solid #cbd5e1; padding: 2px 4px; }
+    .count-box:last-child { border-right: none; }
+    .count-num { color: #b91c1c; font-size: 15px; font-weight: 900; }
+
+    /* पर्ची की 4-कॉलम टेबल */
+    .parchi-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 12.5px; }
+    .parchi-table th, .parchi-table td { border: 1px solid #222; padding: 5px 6px; text-align: left; vertical-align: middle; }
+    .parchi-table th { background: #f1f5f9; text-align: center; font-weight: 800; font-size: 13px; }
+    .sec-row { background: #e2e8f0; font-weight: bold; font-size: 13px; text-align: left; padding: 6px 8px; border: 1px solid #222; }
+    .qty-cell { text-align: right; font-weight: bold; width: 110px; }
+    .qty-input { width: 60px; text-align: right; font-weight: bold; border: 1px solid #ccc; border-radius: 3px; padding: 2px 4px; font-size: 12px; }
+
+    .parchi-footer { margin-top: 15px; font-size: 11.5px; border-top: 1px solid #222; padding-top: 8px; line-height: 1.5; }
+    .sig-row { display: flex; justify-content: space-between; margin-top: 35px; padding: 0 20px; font-weight: bold; font-size: 13px; }
+
     @media print {
       body { background: #fff; padding: 0; }
-      .container { box-shadow: none; padding: 0; max-width: 100%; }
-      .settings-panel, .category-pills, .dishes-grid, .btn-row, h1 { display: none; }
-      .parchi-box { border: none; padding: 0; }
+      .controls-panel { display: none; }
+      .parchi-sheet { border: 2px solid #000; box-shadow: none; padding: 15px 10px; max-width: 100%; }
+      .qty-input { border: none; background: transparent; }
     }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <h1>कैटरिंग किराना, भट्ठी व धुलाई पर्ची सिस्टम</h1>
+<div class="app-container">
 
-  <div class="settings-panel">
-    <div class="form-group">
-      <label>कुल मेहमान (Guests):</label>
-      <input type="number" id="guestCount" value="1200" min="50" step="50" oninput="calculateKirana()">
-    </div>
-    <div class="form-group">
-      <label>पसंदीदा कुकिंग तेल (Brand & Type):</label>
-      <select id="oilChoice" onchange="calculateKirana()">
-        <option value="फॉर्च्यून सोयाबीन तेल (Fortune Soya)">फॉर्च्यून सोयाबीन तेल (15 L Tin)</option>
-        <option value="फॉर्च्यून मूंगफली तेल (Fortune Groundnut)">फॉर्च्यून मूंगफली तेल (15 L Tin)</option>
-        <option value="सलोनी / बैल कोल्हू सरसों तेल (Mustard)">सलोनी / बैल कोल्हू सरसों तेल (15 L Tin)</option>
-        <option value="फॉर्च्यून सनलाइट सनफ्लावर तेल">फॉर्च्यून सनफ्लावर तेल (15 L Tin)</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>देसी घी ब्रांड (Pure Ghee):</label>
-      <select id="gheeChoice" onchange="calculateKirana()">
-        <option value="अमूल देसी घी (Amul Ghee)">अमूल देसी घी (15 Kg Tin / Pkt)</option>
-        <option value="गोवर्धन / सरस देसी घी">गोवर्धन / सरस देसी घी</option>
-        <option value="नेस्ले / मिल्कफूड देसी घी">मिल्कफूड / नोवा देसी घी</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>पकवान खोजें:</label>
-      <input type="text" id="dishSearch" placeholder="सब्जी, मिठाई या स्टार्टर खोजें..." onkeyup="filterDishes()">
-    </div>
-  </div>
-
-  <div class="category-pills" id="categoryPills">
-    <button class="pill active" onclick="setCategory('All', this)">सभी (All)</button>
-    <button class="pill" onclick="setCategory('मिठाई', this)">मिठाई</button>
-    <button class="pill" onclick="setCategory('सब्जी व पनीर', this)">सब्जी व पनीर</button>
-    <button class="pill" onclick="setCategory('दाल व कढ़ी', this)">दाल व कढ़ी</button>
-    <button class="pill" onclick="setCategory('रोटी व पूड़ी', this)">रोटी व पूड़ी</button>
-    <button class="pill" onclick="setCategory('चावल व पुलाव', this)">चावल व पुलाव</button>
-    <button class="pill" onclick="setCategory('नाश्ता व स्टार्टर', this)">नाश्ता व स्टार्टर</button>
-    <button class="pill" onclick="setCategory('चाइनीज व फास्टफूड', this)">चाइनीज व फास्टफूड</button>
-    <button class="pill" onclick="setCategory('रायता व अन्य', this)">रायता व अन्य</button>
-  </div>
-
-  <div class="dishes-grid" id="dishesList"></div>
-
-  <div class="btn-row">
-    <button class="btn btn-red" onclick="calculateKirana()">पर्ची अपडेट करें</button>
-    <button class="btn btn-green" onclick="shareWhatsApp()">व्हाट्सएप पर शेयर करें</button>
-    <button class="btn btn-blue" onclick="window.print()">प्रिंट / PDF सेव करें</button>
-    <button class="btn btn-gray" onclick="clearSelections()">सब हटाएं</button>
-  </div>
-
-  <div class="parchi-box" id="printableArea">
-    <div class="parchi-header">
-      <div class="parchi-title">कैटरिंग कच्ची किराना व भट्ठी सामग्री पर्ची</div>
-      <div style="font-size: 13px; margin-top: 4px; color: #475569;">
-        कुल व्यक्ति: <strong id="outGuest">1200</strong> | 
-        मेन्यू आइटम: <span id="outDishCount">0</span> पकवान
+  <!-- कंट्रोल पैनल -->
+  <div class="controls-panel">
+    <div class="panel-title">शादी/समारोह विवरण एवं शिफ्ट अनुसार संख्या</div>
+    
+    <div class="grid-4">
+      <div class="field-group">
+        <label>हलवाई का नाम व मोबाइल:</label>
+        <input type="text" id="inHalwai" value="हलवाई राजू S/o रामचंद्रजी प्रजापति (8435146842)">
       </div>
-      <div style="font-size: 12px; margin-top: 4px; color: #64748b;" id="selectedDishesSummary"></div>
+      <div class="field-group">
+        <label>श्रीमान् (पार्टी का नाम):</label>
+        <input type="text" id="inClient" value="बापूलाल जी गजानन्द जी पाटीदार">
+      </div>
+      <div class="field-group">
+        <label>गाँव / शहर:</label>
+        <input type="text" id="inVillage" value="बर्डिया अमरा">
+      </div>
+      <div class="field-group">
+        <label>तारीख (दिनांक):</label>
+        <input type="text" id="inDate" value="11/02/2026">
+      </div>
     </div>
 
-    <div id="parchiContent"></div>
+    <div class="grid-4" style="background: #fff7ed; padding: 10px; border-radius: 8px; border: 1px solid #fed7aa; margin-bottom: 12px;">
+      <div class="field-group">
+        <label>1. सुबह का नाश्ता संख्या:</label>
+        <input type="number" id="inNastaMorn" value="350" step="25" oninput="calculateSheet()">
+      </div>
+      <div class="field-group">
+        <label>2. शाम का नाश्ता संख्या:</label>
+        <input type="number" id="inNastaEve" value="350" step="25" oninput="calculateSheet()">
+      </div>
+      <div class="field-group">
+        <label>3. सुबह भोजन संख्या (Lunch):</label>
+        <input type="number" id="inMealMorn" value="2000" step="50" oninput="calculateSheet()">
+      </div>
+      <div class="field-group">
+        <label>4. शाम का भोजन संख्या (Dinner):</label>
+        <input type="number" id="inMealEve" value="500" step="50" oninput="calculateSheet()">
+      </div>
+    </div>
+
+    <div class="dish-select-box">
+      <label style="font-weight: bold; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">
+        मेन्यू के पकवान चुनें (ऑटो-सामान जोड़ने के लिए टिक करें):
+      </label>
+      <div class="dish-tag-grid" id="dishPills"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-calc" onclick="calculateSheet()">पर्ची अपडेट करें</button>
+      <button class="btn btn-wa" onclick="shareWhatsApp()">व्हाट्सएप पर भेजें</button>
+      <button class="btn btn-print" onclick="window.print()">पर्ची प्रिंट करें / PDF</button>
+    </div>
   </div>
+
+  <!-- असली पर्ची का व्यू -->
+  <div class="parchi-sheet" id="printableArea">
+    
+    <div class="parchi-top-line">
+      <span>॥ श्री बालाजी ॥</span>
+      <span>॥ श्री गणेशाय नमः ॥</span>
+      <span id="outPhone">Mob. 8435146842, 9754687537</span>
+    </div>
+
+    <div class="parchi-main-head">
+      <h2 class="halwai-name" id="outHalwai">हलवाई राजू S/o रामचंद्रजी प्रजापति</h2>
+      <div class="halwai-sub">निवास - खजूरीरुण्डा, तह. गरोठ, जिला-मन्दसौर (म.प्र.)</div>
+      <div class="order-note">हमारे यहाँ शादी, पार्टी, पिकनिक, धार्मिक कार्यक्रम में कच्ची-पक्की रसोई बनाने के आर्डर लिये जाते हैं।</div>
+    </div>
+
+    <div class="client-info-box">
+      <div class="client-row">
+        <span>श्रीमान्: <span class="dotted-fill" id="outClient">बापूलाल जी गजानन्द जी पाटीदार</span></span>
+        <span>गांव: <span class="dotted-fill" id="outVillage">बर्डिया अमरा</span></span>
+        <span>दिनांक को खाना: <span class="dotted-fill" id="outDate">11/02/2026</span> को</span>
+      </div>
+    </div>
+
+    <div class="counts-banner">
+      <div class="count-box">सुबह नाश्ता: <span class="count-num" id="outNastaM">350</span></div>
+      <div class="count-box">शाम नाश्ता: <span class="count-num" id="outNastaE">350</span></div>
+      <div class="count-box">सुबह भोजन: <span class="count-num" id="outMealM">2000</span></div>
+      <div class="count-box">शाम भोजन: <span class="count-num" id="outMealE">500</span> लगभग</div>
+    </div>
+
+    <!-- 4 कॉलम किराना व सामग्री टेबल -->
+    <div id="parchiTableContainer"></div>
+
+    <div class="parchi-footer">
+      <strong>नोट:-</strong> 1. बर्तन साफ करके देना होगा। 2. लहसुन, प्याज, मटर आपको छिलकर देना होगा। 3. सलाद की जवाबदारी आपकी रहेगी, हमारी नहीं। 4. सामान की गुणवत्ता अच्छी होनी चाहिए। 5. आर्डर देते समय 25% राशि एडवांस देना होगी।
+      <div class="sig-row">
+        <span>हस्ताक्षर पार्टी / ग्राहक: ........................</span>
+        <span>हस्ताक्षर हलवाई: ........................</span>
+      </div>
+    </div>
+
+  </div>
+
 </div>
 
 <script>
-// 100+ हलवाई पकवान डेटाबेस (प्रति 100 व्यक्ति खपत)
-const dishDatabase = [
-  // मिठाई
-  { id: 1, name: "गुलाब जामुन", cat: "मिठाई", r: { "खोया / मावा": [5, "किलो", "डेयरी"], "मैदा": [1, "किलो", "अनाज"], "चीनी (M 30 ग्रेड)": [8, "किलो", "किराना"], "देसी घी": [4, "किलो", "तेलघी"], "हरी इलायची": [0.05, "किलो", "मसाले"] } },
-  { id: 2, name: "रसगुल्ला", cat: "मिठाई", r: { "छेना / पनीर": [6, "किलो", "डेयरी"], "चीनी (M 30 ग्रेड)": [10, "किलो", "किराना"] } },
-  { id: 3, name: "काजू कतली", cat: "मिठाई", r: { "काजू टुकड़ा": [5, "किलो", "सूखामेवा"], "चीनी (M 30 ग्रेड)": [4, "किलो", "किराना"], "देसी घी": [0.5, "किलो", "तेलघी"] } },
-  { id: 4, name: "मूँग दाल हलवा", cat: "मिठाई", r: { "मूँग मोगर दाल": [4, "किलो", "अनाज"], "देसी घी": [4.5, "किलो", "तेलघी"], "चीनी (M 30 ग्रेड)": [4.5, "किलो", "किराना"], "दूध": [5, "लीटर", "डेयरी"] } },
-  { id: 5, name: "गाजर हलवा", cat: "मिठाई", r: { "गाजर": [25, "किलो", "सब्जी"], "दूध": [10, "लीटर", "डेयरी"], "खोया / मावा": [3, "किलो", "डेयरी"], "चीनी (M 30 ग्रेड)": [4, "किलो", "किराना"], "देसी घी": [2, "किलो", "तेलघी"] } },
-  { id: 6, name: "जलेबी", cat: "मिठाई", r: { "मैदा": [4, "किलो", "अनाज"], "चीनी (M 30 ग्रेड)": [8, "किलो", "किराना"], "रिफाइंड तेल": [4, "लीटर", "तेलघी"], "केसर कलर / हाइड्रो": [0.02, "किलो", "किराना"] } },
-  { id: 7, name: "इमरती", cat: "मिठाई", r: { "उड़द मोगर दाल": [4, "किलो", "अनाज"], "चीनी (M 30 ग्रेड)": [8, "किलो", "किराना"], "देसी घी": [4, "किलो", "तेलघी"] } },
-  { id: 8, name: "मोतीचूर लड्डू", cat: "मिठाई", r: { "बेसन (राजधानी / उत्तम)": [4, "किलो", "अनाज"], "चीनी (M 30 ग्रेड)": [6, "किलो", "किराना"], "देसी घी": [4, "किलो", "तेलघी"] } },
-  { id: 9, name: "रसमलाई", cat: "मिठाई", r: { "दूध": [20, "लीटर", "डेयरी"], "छेना / पनीर": [5, "किलो", "डेयरी"], "चीनी (M 30 ग्रेड)": [5, "किलो", "किराना"] } },
-  { id: 10, name: "बालूशाही", cat: "मिठाई", r: { "मैदा": [5, "किलो", "अनाज"], "देसी घी": [3, "किलो", "तेलघी"], "चीनी (M 30 ग्रेड)": [6, "किलो", "किराना"] } },
-  { id: 11, name: "मिल्क केक", cat: "मिठाई", r: { "दूध": [25, "लीटर", "डेयरी"], "चीनी (M 30 ग्रेड)": [4, "किलो", "किराना"], "देसी घी": [1, "किलो", "तेलघी"] } },
-  { id: 12, name: "कलाकंद", cat: "मिठाई", r: { "छेना / पनीर": [6, "किलो", "डेयरी"], "खोया / मावा": [2.5, "किलो", "डेयरी"], "चीनी (M 30 ग्रेड)": [3, "किलो", "किराना"] } },
-  { id: 13, name: "श्रीखंड", cat: "मिठाई", r: { "दही (चक्का)": [16, "किलो", "डेयरी"], "बूरा / पिसी चीनी": [6, "किलो", "किराना"] } },
-  { id: 14, name: "घेवर", cat: "मिठाई", r: { "मैदा": [4, "किलो", "अनाज"], "देसी घी": [3, "किलो", "तेलघी"], "चीनी (M 30 ग्रेड)": [6, "किलो", "किराना"] } },
-  { id: 15, name: "रबड़ी", cat: "मिठाई", r: { "दूध": [25, "लीटर", "डेयरी"], "चीनी (M 30 ग्रेड)": [2.5, "किलो", "किराना"] } },
-
-  // सब्जी व पनीर
-  { id: 21, name: "शाही पनीर", cat: "सब्जी व पनीर", r: { "पनीर": [6, "किलो", "डेयरी"], "टमाटर ग्रेवी": [6, "किलो", "सब्जी"], "खोया / मावा": [1, "किलो", "डेयरी"], "काजू मगज पेस्ट": [0.8, "किलो", "सूखामेवा"], "रिफाइंड तेल": [1.5, "लीटर", "तेलघी"], "अमूल फ्रेश क्रीम": [1, "लीटर", "डेयरी"] } },
-  { id: 22, name: "मटर पनीर", cat: "सब्जी व पनीर", r: { "पनीर": [5, "किलो", "डेयरी"], "हरी मटर": [6, "किलो", "सब्जी"], "टमाटर ग्रेवी": [5, "किलो", "सब्जी"], "रिफाइंड तेल": [1.5, "लीटर", "तेलघी"] } },
-  { id: 23, name: "पनीर बटर मसाला", cat: "सब्जी व पनीर", r: { "पनीर": [6, "किलो", "डेयरी"], "अमूल बटर (मक्खन)": [1.2, "किलो", "डेयरी"], "टमाटर ग्रेवी": [6, "किलो", "सब्जी"], "अमूल फ्रेश क्रीम": [1, "लीटर", "डेयरी"] } },
-  { id: 24, name: "कढ़ाई पनीर", cat: "सब्जी व पनीर", r: { "पनीर": [6, "किलो", "डेयरी"], "शिमला मिर्च": [4, "किलो", "सब्जी"], "प्याज": [4, "किलो", "सब्जी"], "रिफाइंड तेल": [1.5, "लीटर", "तेलघी"] } },
-  { id: 25, name: "पालक पनीर", cat: "सब्जी व पनीर", r: { "पनीर": [5, "किलो", "डेयरी"], "पालक": [12, "किलो", "सब्जी"], "रिफाइंड तेल": [1.5, "लीटर", "तेलघी"] } },
-  { id: 26, name: "मलाई कोफ्ता", cat: "सब्जी व पनीर", r: { "पनीर": [3, "किलो", "डेयरी"], "आलू": [4, "किलो", "सब्जी"], "खोया / मावा": [1, "किलो", "डेयरी"], "काजू मगज पेस्ट": [1, "किलो", "सूखामेवा"], "रिफाइंड तेल": [3, "लीटर", "तेलघी"] } },
-  { id: 27, name: "मिक्स वेज", cat: "सब्जी व पनीर", r: { "फूलगोभी": [4, "किलो", "सब्जी"], "गाजर": [3, "किलो", "सब्जी"], "हरी मटर": [3, "किलो", "सब्जी"], "बीन्स": [2, "किलो", "सब्जी"], "रिफाइंड तेल": [2, "लीटर", "तेलघी"] } },
-  { id: 28, name: "आलू गोभी मटर", cat: "सब्जी व पनीर", r: { "आलू": [5, "किलो", "सब्जी"], "फूलगोभी": [5, "किलो", "सब्जी"], "हरी मटर": [3, "किलो", "सब्जी"], "रिफाइंड तेल": [1.5, "लीटर", "तेलघी"] } },
-  { id: 29, name: "दम आलू", cat: "सब्जी व पनीर", r: { "आलू": [12, "किलो", "सब्जी"], "दही (चक्का)": [3, "किलो", "डेयरी"], "रिफाइंड तेल": [3, "लीटर", "तेलघी"] } },
-  { id: 30, name: "छोले मसाला (काबुली)", cat: "सब्जी व पनीर", r: { "काबुली चना": [6, "किलो", "अनाज"], "टमाटर ग्रेवी": [5, "किलो", "सब्जी"], "प्याज": [5, "किलो", "सब्जी"], "रिफाइंड तेल": [2, "लीटर", "तेलघी"], "छोले मसाला (MDH/Everest)": [0.3, "किलो", "मसाले"] } },
-  { id: 31, name: "राजमा मसाला", cat: "सब्जी व पनीर", r: { "राजमा (चित्रा)": [6, "किलो", "अनाज"], "प्याज": [4, "किलो", "सब्जी"], "टमाटर ग्रेवी": [5, "किलो", "सब्जी"], "रिफाइंड तेल": [2, "लीटर", "तेलघी"] } },
-  { id: 32, name: "सेव टमाटर", cat: "सब्जी व पनीर", r: { "रतलामी मोटा सेव": [3.5, "किलो", "किराना"], "टमाटर ग्रेवी": [8, "किलो", "सब्जी"], "रिफाइंड तेल": [1.5, "लीटर", "तेलघी"] } },
-  { id: 33, name: "मेथी मलाई मटर", cat: "सब्जी व पनीर", r: { "हरी मटर": [6, "किलो", "सब्जी"], "हरी मेथी": [4, "किलो", "सब्जी"], "अमूल फ्रेश क्रीम": [2, "लीटर", "डेयरी"] } },
-
-  // दाल व कढ़ी
-  { id: 41, name: "दाल मखनी", cat: "दाल व कढ़ी", r: { "उड़द साबुत काली दाल": [4, "किलो", "अनाज"], "राजमा (चित्रा)": [1, "किलो", "अनाज"], "अमूल बटर (मक्खन)": [1.5, "किलो", "डेयरी"], "अमूल फ्रेश क्रीम": [1, "लीटर", "डेयरी"] } },
-  { id: 42, name: "दाल तड़का", cat: "दाल व कढ़ी", r: { "तुअर दाल": [5, "किलो", "अनाज"], "टमाटर ग्रेवी": [3, "किलो", "सब्जी"], "देसी घी": [1.5, "किलो", "तेलघी"] } },
-  { id: 43, name: "गुजराती कढ़ी", cat: "दाल व कढ़ी", r: { "दही (चक्का)": [8, "किलो", "डेयरी"], "बेसन (राजधानी / उत्तम)": [1.5, "किलो", "अनाज"], "देसी घी": [1, "किलो", "तेलघी"], "गुड़": [1, "किलो", "किराना"] } },
-  { id: 44, name: "पकौड़ा कढ़ी", cat: "दाल व कढ़ी", r: { "छाछ / खट्टी दही": [10, "लीटर", "डेयरी"], "बेसन (राजधानी / उत्तम)": [3.5, "किलो", "अनाज"], "रिफाइंड तेल": [2.5, "लीटर", "तेलघी"] } },
-  { id: 45, name: "दाल बाटी की दाल", cat: "दाल व कढ़ी", r: { "पंचमेल मिक्स दाल": [6, "किलो", "अनाज"], "देसी घी": [2, "किलो", "तेलघी"], "टमाटर ग्रेवी": [4, "किलो", "सब्जी"] } },
-
-  // रोटी व पूड़ी
-  { id: 51, name: "सादा पूड़ी", cat: "रोटी व पूड़ी", r: { "गेहूँ आटा (MP शरबती)": [10, "किलो", "अनाज"], "रिफाइंड तेल": [5, "लीटर", "तेलघी"] } },
-  { id: 52, name: "मसाला / बेड़मी पूड़ी", cat: "रोटी व पूड़ी", r: { "गेहूँ आटा (MP शरबती)": [8, "किलो", "अनाज"], "उड़द मोगर दाल": [2, "किलो", "अनाज"], "रिफाइंड तेल": [5, "लीटर", "तेलघी"] } },
-  { id: 53, name: "भटूरा", cat: "रोटी व पूड़ी", r: { "मैदा": [10, "किलो", "अनाज"], "सूजी / रवा": [1, "किलो", "अनाज"], "दही (चक्का)": [1, "किलो", "डेयरी"], "रिफाइंड तेल": [5, "लीटर", "तेलघी"] } },
-  { id: 54, name: "तंदूरी बटर रोटी", cat: "रोटी व पूड़ी", r: { "गेहूँ आटा (MP शरबती)": [10, "किलो", "अनाज"], "अमूल बटर (मक्खन)": [1.5, "किलो", "डेयरी"] } },
-  { id: 55, name: "बटर नान", cat: "रोटी व पूड़ी", r: { "मैदा": [10, "किलो", "अनाज"], "दूध": [2, "लीटर", "डेयरी"], "अमूल बटर (मक्खन)": [2, "किलो", "डेयरी"] } },
-  { id: 56, name: "मिस्सी रोटी", cat: "रोटी व पूड़ी", r: { "गेहूँ आटा (MP शरबती)": [6, "किलो", "अनाज"], "बेसन (राजधानी / उत्तम)": [4, "किलो", "अनाज"], "अमूल बटर (मक्खन)": [1.5, "किलो", "डेयरी"] } },
-  { id: 57, name: "राजस्थानी बाटी", cat: "रोटी व पूड़ी", r: { "गेहूँ आटा (मोटा बाटी)": [12, "किलो", "अनाज"], "सूजी / रवा": [2, "किलो", "अनाज"], "देसी घी": [6, "किलो", "तेलघी"] } },
-
-  // चावल व पुलाव
-  { id: 61, name: "जीरा राइस", cat: "चावल व पुलाव", r: { "बासमती चावल (दावत / इंडिया गेट)": [7, "किलो", "अनाज"], "देसी घी": [1, "किलो", "तेलघी"], "जीरा": [0.2, "किलो", "मसाले"] } },
-  { id: 62, name: "वेज दम बिरयानी", cat: "चावल व पुलाव", r: { "बासमती चावल (दावत / इंडिया गेट)": [8, "किलो", "अनाज"], "पनीर": [2, "किलो", "डेयरी"], "फूलगोभी": [2, "किलो", "सब्जी"], "देसी घी": [2, "किलो", "तेलघी"], "बिरयानी मसाला": [0.2, "किलो", "मसाले"] } },
-  { id: 63, name: "वेज पुलाव", cat: "चावल व पुलाव", r: { "बासमती चावल (दावत / इंडिया गेट)": [7, "किलो", "अनाज"], "हरी मटर": [2, "किलो", "सब्जी"], "गाजर": [1.5, "किलो", "सब्जी"], "देसी घी": [1.5, "किलो", "तेलघी"] } },
-
-  // नाश्ता व स्टार्टर
-  { id: 71, name: "समोसा", cat: "नाश्ता व स्टार्टर", r: { "मैदा": [5, "किलो", "अनाज"], "आलू": [10, "किलो", "सब्जी"], "हरी मटर": [2, "किलो", "सब्जी"], "रिफाइंड तेल": [6, "लीटर", "तेलघी"], "टमाटर सॉस (Kissan / Maggi)": [2, "किलो", "किराना"] } },
-  { id: 72, name: "दाल कचौड़ी", cat: "नाश्ता व स्टार्टर", r: { "मैदा": [5, "किलो", "अनाज"], "उड़द मोगर दाल": [2, "किलो", "अनाज"], "रिफाइंड तेल": [6, "लीटर", "तेलघी"] } },
-  { id: 73, name: "प्याज कचौड़ी", cat: "नाश्ता व स्टार्टर", r: { "मैदा": [5, "किलो", "अनाज"], "प्याज": [7, "किलो", "सब्जी"], "बेसन (राजधानी / उत्तम)": [1.5, "किलो", "अनाज"], "रिफाइंड तेल": [6, "लीटर", "तेलघी"] } },
-  { id: 74, name: "खमन ढोकला", cat: "नाश्ता व स्टार्टर", r: { "बेसन (राजधानी / उत्तम)": [5, "किलो", "अनाज"], "चीनी (M 30 ग्रेड)": [1, "किलो", "किराना"], "रिफाइंड तेल": [1.5, "लीटर", "तेलघी"] } },
-  { id: 75, name: "दही बड़ा", cat: "नाश्ता व स्टार्टर", r: { "उड़द मोगर दाल": [4, "किलो", "अनाज"], "दही (चक्का)": [15, "किलो", "डेयरी"], "रिफाइंड तेल": [4, "लीटर", "तेलघी"] } },
-  { id: 76, name: "पनीर टिक्का / पकौड़ा", cat: "नाश्ता व स्टार्टर", r: { "पनीर": [6, "किलो", "डेयरी"], "बेसन (राजधानी / उत्तम)": [2, "किलो", "अनाज"], "रिफाइंड तेल": [4, "लीटर", "तेलघी"] } },
-  { id: 77, name: "हरा भरा कबाब", cat: "नाश्ता व स्टार्टर", r: { "पालक": [5, "किलो", "सब्जी"], "हरी मटर": [3, "किलो", "सब्जी"], "आलू": [4, "किलो", "सब्जी"], "रिफाइंड तेल": [3, "लीटर", "तेलघी"], "टमाटर सॉस (Kissan / Maggi)": [1.5, "किलो", "किराना"] } },
-
-  // चाइनीज व फास्टफूड
-  { id: 81, name: "वेज नूडल्स (हक्का चाउमीन)", cat: "चाइनीज व फास्टफूड", r: { "नूडल्स पैकेट": [8, "किलो", "किराना"], "पत्तागोभी": [4, "किलो", "सब्जी"], "शिमला मिर्च": [2, "किलो", "सब्जी"], "रिफाइंड तेल": [2, "लीटर", "तेलघी"], "टमाटर सॉस (Kissan / Maggi)": [2, "किलो", "किराना"], "डार्क सोया सॉस (Ching's)": [0.6, "लीटर", "किराना"], "रेड चिली सॉस (Ching's)": [0.8, "लीटर", "किराना"], "सिरका / विनेगर": [0.6, "लीटर", "किराना"] } },
-  { id: 82, name: "वेज मंचूरियन", cat: "चाइनीज व फास्टफूड", r: { "पत्तागोभी": [6, "किलो", "सब्जी"], "गाजर": [3, "किलो", "सब्जी"], "मैदा": [2, "किलो", "अनाज"], "कॉर्नफ्लोर (अरारोट)": [2, "किलो", "किराना"], "रिफाइंड तेल": [4, "लीटर", "तेलघी"], "डार्क सोया सॉस (Ching's)": [0.8, "लीटर", "किराना"], "रेड चिली सॉस (Ching's)": [1, "लीटर", "किराना"] } },
-  { id: 83, name: "चिली पनीर", cat: "चाइनीज व फास्टफूड", r: { "पनीर": [6, "किलो", "डेयरी"], "शिमला मिर्च": [4, "किलो", "सब्जी"], "प्याज": [3, "किलो", "सब्जी"], "कॉर्नफ्लोर (अरारोट)": [1.5, "किलो", "किराना"], "रिफाइंड तेल": [3, "लीटर", "तेलघी"], "डार्क सोया सॉस (Ching's)": [0.8, "लीटर", "किराना"], "टमाटर सॉस (Kissan / Maggi)": [2, "किलो", "किराना"] } },
-  { id: 84, name: "पाव भाजी", cat: "चाइनीज व फास्टफूड", r: { "पाव बंडल (लड़ी)": [25, "पैकेट", "किराना"], "आलू": [8, "किलो", "सब्जी"], "फूलगोभी": [4, "किलो", "सब्जी"], "टमाटर ग्रेवी": [6, "किलो", "सब्जी"], "अमूल बटर (मक्खन)": [3.5, "किलो", "डेयरी"], "पाव भाजी मसाला (Everest)": [0.4, "किलो", "मसाले"] } },
-
-  // रायता व अन्य
-  { id: 91, name: "बूंदी रायता", cat: "रायता व अन्य", r: { "दही (चक्का)": [12, "किलो", "डेयरी"], "रायता बूंदी": [2, "किलो", "किराना"], "जीरा": [0.15, "किलो", "मसाले"], "काला नमक": [0.2, "किलो", "मसाले"] } },
-  { id: 92, name: "पाइनएप्पल (अनानास) रायता", cat: "रायता व अन्य", r: { "दही (चक्का)": [12, "किलो", "डेयरी"], "पाइनएप्पल टिन स्लाइस": [2, "टिन", "किराना"], "चीनी (M 30 ग्रेड)": [1.5, "किलो", "किराना"] } },
-  { id: 93, name: "ग्रीन सलाद", cat: "रायता व अन्य", r: { "खीरा": [6, "किलो", "सब्जी"], "टमाटर ग्रेवी": [5, "किलो", "सब्जी"], "गाजर": [3, "किलो", "सब्जी"], "नींबू": [1.5, "किलो", "सब्जी"] } }
+// शादी व कैटरिंग के मुख्य पकवान
+const availableDishes = [
+  { id: 1, name: "पोहा-जलेबी (नाश्ता)", type: "nasta", def: true },
+  { id: 2, name: "दाल कचौड़ी / समोसा", type: "nasta", def: true },
+  { id: 3, name: "चाय व कॉफी", type: "nasta", def: true },
+  { id: 4, name: "गुलाब जामुन", type: "meal", def: true },
+  { id: 5, name: "काजू कतली / मावा बर्फी", type: "meal", def: true },
+  { id: 6, name: "शाही पनीर / मटर पनीर", type: "meal", def: true },
+  { id: 7, name: "दाल तुवर (तड़का)", type: "meal", def: true },
+  { id: 8, name: "गुजराती कढ़ी", type: "meal", def: true },
+  { id: 9, name: "सादा पूड़ी (ग्यारस गोल्ड)", type: "meal", def: true },
+  { id: 10, name: "दही बड़ा", type: "meal", def: true },
+  { id: 11, name: "बूंदी रायता", type: "meal", def: true },
+  { id: 12, name: "जीरा राइस / पुलाव", type: "meal", def: true },
+  { id: 13, name: "आलू गोभी मटर", type: "meal", def: false },
+  { id: 14, name: "दाल बाटी चूरमा", type: "meal", def: false }
 ];
 
-let selectedCategory = "All";
-const selectedDishes = new Set();
+const selectedDishes = new Set(availableDishes.filter(d => d.def).map(d => d.id));
 
-function renderDishes() {
-  const container = document.getElementById("dishesList");
+function renderDishPills() {
+  const container = document.getElementById("dishPills");
   container.innerHTML = "";
-  const query = document.getElementById("dishSearch").value.trim().toLowerCase();
-
-  dishDatabase.forEach(dish => {
-    const matchCat = (selectedCategory === "All" || dish.cat === selectedCategory);
-    const matchSearch = dish.name.toLowerCase().includes(query);
-    if (matchCat && matchSearch) {
-      const card = document.createElement("label");
-      card.className = "dish-card";
-      const isChecked = selectedDishes.has(dish.id) ? "checked" : "";
-      card.innerHTML = `<input type="checkbox" value="${dish.id}" ${isChecked} onchange="toggleDish(${dish.id})"> <span>${dish.name}</span>`;
-      container.appendChild(card);
-    }
+  availableDishes.forEach(d => {
+    const label = document.createElement("label");
+    label.className = "dish-pill";
+    const checked = selectedDishes.has(d.id) ? "checked" : "";
+    label.innerHTML = `<input type="checkbox" ${checked} onchange="toggleDish(${d.id})"> <span>${d.name}</span>`;
+    container.appendChild(label);
   });
-}
-
-function setCategory(cat, btn) {
-  selectedCategory = cat;
-  document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
-  btn.classList.add("active");
-  renderDishes();
-}
-
-function filterDishes() {
-  renderDishes();
 }
 
 function toggleDish(id) {
-  if (selectedDishes.has(id)) {
-    selectedDishes.delete(id);
-  } else {
-    selectedDishes.add(id);
-  }
-  calculateKirana();
+  if (selectedDishes.has(id)) selectedDishes.delete(id);
+  else selectedDishes.add(id);
+  calculateSheet();
 }
 
-function clearSelections() {
-  selectedDishes.clear();
-  renderDishes();
-  calculateKirana();
-}
+function calculateSheet() {
+  // इनपुट वैल्यूज
+  const nastaM = parseInt(document.getElementById("inNastaMorn").value) || 0;
+  const nastaE = parseInt(document.getElementById("inNastaEve").value) || 0;
+  const mealM = parseInt(document.getElementById("inMealMorn").value) || 0;
+  const mealE = parseInt(document.getElementById("inMealEve").value) || 0;
 
-function calculateKirana() {
-  const guests = parseFloat(document.getElementById("guestCount").value) || 0;
-  document.getElementById("outGuest").innerText = guests;
-  document.getElementById("outDishCount").innerText = selectedDishes.size;
+  const totalNasta = nastaM + nastaE;
+  const totalMeal = mealM + mealE;
 
-  const factor = guests / 100;
-  const oilBrand = document.getElementById("oilChoice").value;
-  const gheeBrand = document.getElementById("gheeChoice").value;
+  // हेडर अपडेट
+  document.getElementById("outHalwai").innerText = document.getElementById("inHalwai").value;
+  document.getElementById("outClient").innerText = document.getElementById("inClient").value;
+  document.getElementById("outVillage").innerText = document.getElementById("inVillage").value;
+  document.getElementById("outDate").innerText = document.getElementById("inDate").value;
 
-  const rawAgg = {};
-  const names = [];
+  document.getElementById("outNastaM").innerText = nastaM;
+  document.getElementById("outNastaE").innerText = nastaE;
+  document.getElementById("outMealM").innerText = mealM;
+  document.getElementById("outMealE").innerText = mealE;
 
-  selectedDishes.forEach(id => {
-    const dish = dishDatabase.find(d => d.id === id);
-    if (dish) {
-      names.push(dish.name);
-      for (const [item, data] of Object.entries(dish.r)) {
-        let finalItemName = item;
-        let [qty, unit, cat] = data;
+  // मानक अनुपात आधारित किराना लिस्ट (हस्तलिखित पर्ची के अनुसार)
+  const items = [
+    // सेक्शन 1: किराना, तेल, घी, शक्कर, दाल
+    { sec: "1. किराना, तेल, घी, शक्कर व दालें", list: [
+      { name: "नमक टाटा", qty: Math.ceil(totalMeal * 0.012 + totalNasta * 0.003), unit: "Kg" },
+      { name: "नमक काला (पिसा)", qty: 500, unit: "g" },
+      { name: "नारियल (श्रीफल)", qty: 5, unit: "नग" },
+      { name: "माचिस, कपूर, चन्दन", qty: 1, unit: "सेट" },
+      { name: "तेल मूंगफली / सोयाबीन (फॉर्च्यून)", qty: Math.ceil(totalMeal * 0.08 + totalNasta * 0.02) >= 15 ? Math.ceil((totalMeal * 0.08 + totalNasta * 0.02)/15) : Math.ceil(totalMeal * 0.08), unit: Math.ceil(totalMeal * 0.08) >= 15 ? "टिन (15L)" : "लीटर" },
+      { name: "देशी घी (साँची / अमूल)", qty: Math.ceil(totalMeal * 0.018), unit: "Kg" },
+      { name: "घी डालडा (राग)", qty: Math.ceil(totalMeal * 0.005), unit: "Kg" },
+      { name: "शक्कर म.बड़ा दाना", qty: Math.ceil(totalMeal * 0.09 + totalNasta * 0.03), unit: "Kg" },
+      { name: "शक्कर बुरा / तगार", qty: Math.ceil(totalMeal * 0.01), unit: "Kg" },
+      { name: "बेसन देशी चना का", qty: Math.ceil(totalMeal * 0.015 + totalNasta * 0.015), unit: "Kg" },
+      { name: "बेसन मिल का बारीक", qty: Math.ceil(totalMeal * 0.025), unit: "Kg" },
+      { name: "दाल तुवर जिन झांझा", qty: Math.ceil(totalMeal * 0.03), unit: "Kg" },
+      { name: "दाल मूंग मोगर", qty: Math.ceil(totalMeal * 0.01), unit: "Kg" },
+      { name: "दाल उड़द मोगर", qty: Math.ceil(totalMeal * 0.008 + totalNasta * 0.01), unit: "Kg" },
+      { name: "काबुली चना (छोला)", qty: Math.ceil(totalMeal * 0.015), unit: "Kg" },
+      { name: "आटा पूड़ी ग्यारस गोल्ड", qty: Math.ceil(totalMeal * 0.075), unit: "Kg" },
+      { name: "सूजी जावरा गोल्ड", qty: Math.ceil(totalMeal * 0.003 + totalNasta * 0.005), unit: "Kg" },
+      { name: "चावल बासमती कतरा/रोजम", qty: Math.ceil(totalMeal * 0.02), unit: "Kg" },
+      { name: "पोहा मोटा (नाश्ता)", qty: Math.ceil(totalNasta * 0.05), unit: "Kg" },
+      { name: "सिंगदाना सफेद (मूंगफली)", qty: Math.ceil(totalNasta * 0.015), unit: "Kg" },
+      { name: "चाय पत्ती", qty: Math.ceil(totalNasta * 0.005), unit: "Kg" },
+      { name: "अमचूर पावडर (पुष्प)", qty: 300, unit: "g" },
+      { name: "टाटरी (नींबू सत्व)", qty: 200, unit: "g" },
+      { name: "मीठा सोडा (टाटा)", qty: 200, unit: "g" }
+    ]},
 
-        // ब्रांड रिप्लेसमेंट
-        if (item === "रिफाइंड तेल") {
-          finalItemName = oilBrand;
-        } else if (item === "देसी घी") {
-          finalItemName = gheeBrand;
-        }
+    // सेक्शन 2: पुष्प मसाले, खड़े मसाले व सॉस
+    { sec: "2. मसाले (पुष्प / MDH) व खड़े मसाले", list: [
+      { name: "हल्दी पिसी हुई पुष्प", qty: Math.max(1, Math.round(totalMeal * 0.001)), unit: "Kg" },
+      { name: "मिर्ची लाल पुष्प", qty: Math.max(2, Math.round(totalMeal * 0.0025)), unit: "Kg" },
+      { name: "धनिया पावडर पुष्प", qty: Math.max(2, Math.round(totalMeal * 0.0025)), unit: "Kg" },
+      { name: "जीरा साबुत", qty: Math.max(1, (totalMeal * 0.001).toFixed(1)), unit: "Kg" },
+      { name: "राई", qty: 300, unit: "g" },
+      { name: "सौंफ", qty: Math.ceil(totalMeal * 0.0006 * 1000), unit: "g" },
+      { name: "अजवाइन", qty: 250, unit: "g" },
+      { name: "हरी इलायची", qty: 250, unit: "g" },
+      { name: "लौंग", qty: 150, unit: "g" },
+      { name: "काली मिर्च", qty: 150, unit: "g" },
+      { name: "तेज पान (पत्ता)", qty: 100, unit: "g" },
+      { name: "मसाला मिक्स खड़ा", qty: 250, unit: "g" },
+      { name: "पुष्प किचन किंग मसाला", qty: 4, unit: "पैकेट" },
+      { name: "गरम मसाला पुष्प", qty: 3, unit: "पैकेट" },
+      { name: "कस्तूरी मेथी पुष्प", qty: 300, unit: "g" },
+      { name: "टमाटर सॉस (किसान)", qty: 5, unit: "बोतल" },
+      { name: "रेड चिली सॉस", qty: 2, unit: "बोतल" },
+      { name: "रंग मीठा पीला / केसरी", qty: 50, unit: "g" }
+    ]},
 
-        if (!rawAgg[finalItemName]) {
-          rawAgg[finalItemName] = { qty: 0, unit: unit, cat: cat };
-        }
-        rawAgg[finalItemName].qty += (qty * factor);
-      }
-    }
-  });
+    // सेक्शन 3: डेयरी, सूखा मेवा व सब्जियां
+    { sec: "3. डेयरी, सूखा मेवा व सब्जियां", list: [
+      { name: "काजू टुकड़ी", qty: Math.ceil(totalMeal * 0.005), unit: "Kg" },
+      { name: "बादाम साबुत", qty: 500, unit: "g" },
+      { name: "किशमिश हरी", qty: 500, unit: "g" },
+      { name: "मावा गुलाब जामुन का", qty: Math.ceil(totalMeal * 0.022), unit: "Kg" },
+      { name: "मावा बर्फी का", qty: Math.ceil(totalMeal * 0.015), unit: "Kg" },
+      { name: "पनीर (ताजा)", qty: Math.ceil(totalMeal * 0.025), unit: "Kg" },
+      { name: "दूध (चाय व खीर हेतु)", qty: Math.ceil(totalNasta * 0.06 + totalMeal * 0.01), unit: "लीटर" },
+      { name: "दही (रायता व बड़ा)", qty: Math.ceil(totalMeal * 0.02), unit: "Kg" },
+      { name: "आलू", qty: Math.ceil(totalMeal * 0.03 + totalNasta * 0.02), unit: "Kg" },
+      { name: "प्याज", qty: Math.ceil(totalMeal * 0.025), unit: "Kg" },
+      { name: "लहसुन", qty: Math.ceil(totalMeal * 0.003), unit: "Kg" },
+      { name: "टमाटर लाल", qty: Math.ceil(totalMeal * 0.02), unit: "Kg" },
+      { name: "हरी मिर्च पतली", qty: Math.ceil(totalMeal * 0.003 + totalNasta * 0.003), unit: "Kg" },
+      { name: "हरा धनिया", qty: Math.ceil(totalMeal * 0.003), unit: "Kg" },
+      { name: "अदरक", qty: Math.ceil(totalMeal * 0.001), unit: "Kg" },
+      { name: "नींबू", qty: 50, unit: "नग" }
+    ]},
 
-  document.getElementById("selectedDishesSummary").innerText = names.length > 0 ? "चुने गए पकवान: " + names.join(", ") : "कृपया ऊपर मेन्यू में से पकवान चुनें।";
-
-  // अगर कोई पकवान चुना है तो शादी के सामान्य किराना मसाले (Tata Salt, MDH, Jeera आदि) अपने आप जोड़ें
-  if (selectedDishes.size > 0) {
-    const stdSpices = [
-      { name: "टाटा नमक (Tata Salt)", qty: Math.max(1, Math.round(guests * 0.012)), unit: "किलो", cat: "मसाले" },
-      { name: "हल्दी पाउडर (MDH / Catch / Everest)", qty: Math.max(0.5, (guests * 0.002).toFixed(1)), unit: "किलो", cat: "मसाले" },
-      { name: "लाल मिर्च पाउडर तीखा (MDH / Everest)", qty: Math.max(0.5, (guests * 0.0025).toFixed(1)), unit: "किलो", cat: "मसाले" },
-      { name: "कश्मीरी लाल मिर्च (रंग वाली)", qty: Math.max(0.2, (guests * 0.001).toFixed(1)), unit: "किलो", cat: "मसाले" },
-      { name: "धनिया पाउडर (MDH / Everest)", qty: Math.max(0.5, (guests * 0.003).toFixed(1)), unit: "किलो", cat: "मसाले" },
-      { name: "जीरा साबुत (जीरा तड़का)", qty: Math.max(0.5, (guests * 0.002).toFixed(1)), unit: "किलो", cat: "मसाले" },
-      { name: "गरम मसाला (MDH किचन किंग / गरम मसाला)", qty: Math.max(0.2, (guests * 0.0012).toFixed(1)), unit: "किलो", cat: "मसाले" },
-      { name: "कसूरी मेथी (Kasuri Methi)", qty: Math.max(0.2, (guests * 0.0005).toFixed(2)), unit: "किलो", cat: "मसाले" },
-      { name: "हींग (वंदना / कैच स्ट्रॉन्ग)", qty: Math.max(25, Math.round(guests * 0.12)), unit: "ग्राम", cat: "मसाले" },
-      { name: "खड़ा गरम मसाला मिक्स (लौंग, इलायची, तेजपत्ता, दालचीनी)", qty: Math.max(0.25, (guests * 0.0008).toFixed(2)), unit: "किलो", cat: "मसाले" }
-    ];
-
-    stdSpices.forEach(sp => {
-      if (!rawAgg[sp.name]) {
-        rawAgg[sp.name] = { qty: parseFloat(sp.qty), unit: sp.unit, cat: sp.cat };
-      } else {
-        rawAgg[sp.name].qty += parseFloat(sp.qty);
-      }
-    });
-
-    // भट्ठी, गैस व बर्तन सफाई का सामान (ऑटोमैटिक कैटरिंग फॉर्मूला)
-    const bhattiSupplies = [
-      { name: "कमर्शियल गैस सिलेंडर (19 kg लाल/नीला)", qty: Math.max(2, Math.ceil(guests / 130)), unit: "सिलेंडर", cat: "सफाईगैस" },
-      { name: "बर्तन धोने व पोंछने के फटे कपड़े (कॉटन कतरन / वेस्ट)", qty: Math.max(2, Math.ceil(guests / 220)), unit: "किलो", cat: "सफाईगैस" },
-      { name: "रद्दी पेपर (न्यूज़पेपर / अखबार की रद्दी)", qty: Math.max(3, Math.ceil(guests / 160)), unit: "किलो", cat: "सफाईगैस" },
-      { name: "डिटर्जेंट पाउडर (घड़ी / निरमा सर्फ़)", qty: Math.max(2, Math.ceil(guests / 150)), unit: "किलो", cat: "सफाईगैस" },
-      { name: "बर्तन धोने का साबुन (Vim Bar / टिकिया)", qty: Math.max(4, Math.ceil(guests / 100)), unit: "टिकिया", cat: "सफाईगैस" },
-      { name: "स्टील जूना / जाली स्क्रबर (बर्तनों के लिए)", qty: Math.max(4, Math.ceil(guests / 80)), unit: "पीस", cat: "सफाईगैस" },
-      { name: "एल्युमिनियम फॉयल रोल (खाना ढकने/पैकिंग)", qty: Math.max(1, Math.ceil(guests / 400)), unit: "रोल (1 kg)", cat: "सफाईगैस" },
-      { name: "माचिस बंडल (भट्ठी जलाने के लिए)", qty: Math.max(1, Math.ceil(guests / 500)), unit: "बंडल (10 डिब्बी)", cat: "सफाईगैस" }
-    ];
-
-    bhattiSupplies.forEach(bs => {
-      rawAgg[bs.name] = { qty: bs.qty, unit: bs.unit, cat: bs.cat };
-    });
-  }
-
-  renderParchi(rawAgg);
-}
-
-function renderParchi(aggregated) {
-  const container = document.getElementById("parchiContent");
-  container.innerHTML = "";
-
-  const keys = Object.keys(aggregated);
-  if (keys.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding: 20px; color:#64748b;">ऊपर दिए गए मेन्यू में से शादी के पकवान चुनें। पूरी पर्ची ऑटोमैटिक तैयार हो जाएगी।</div>`;
-    return;
-  }
-
-  const sections = [
-    { key: "तेलघी", title: "🛢️ तेल, डालडा व देसी घी (टिन व खुला हिसाब)" },
-    { key: "अनाज", title: "🌾 आटा, मैदा, दालें व चावल (कट्टा व किलो)" },
-    { key: "मसाले", title: "🧂 खड़े व पिसे ब्रांडेड मसाले (MDH / Tata / Catch)" },
-    { key: "डेयरी", title: "🥛 डेयरी, दूध, मावा, पनीर व मक्खन" },
-    { key: "किराना", title: "🥫 सॉस, पैक्ड किराना व चीनी" },
-    { key: "सूखामेवा", title: "🥜 काजू, किशमिश व सूखा मेवा" },
-    { key: "सब्जी", title: "🍅 ताजी सब्जियां व ग्रेवी सामग्री" },
-    { key: "सफाईगैस", title: "🔥 भट्ठी, गैस सिलेंडर, सफाई, रद्दी व बर्तन धुलाई सामग्री" }
+    // सेक्शन 4: भट्ठी, गैस, सफाई, रद्दी व बर्तन धुलाई सामग्री
+    { sec: "4. गैस, भट्ठी, सफाई, रद्दी व बर्तन धुलाई", list: [
+      { name: "कमर्शियल गैस सिलेंडर (19 kg)", qty: Math.max(3, Math.ceil((totalMeal + totalNasta*0.4) / 180)), unit: "नग" },
+      { name: "गैस भट्ठी सिंगल / डबल", qty: 2, unit: "नग" },
+      { name: "सर्फ (घड़ी डिटर्जेंट)", qty: Math.max(3, Math.ceil(totalMeal / 400)), unit: "Kg" },
+      { name: "बर्तन धोने की टिकिया (Vim Bar)", qty: Math.max(4, Math.ceil(totalMeal / 300)), unit: "टिकिया" },
+      { name: "स्टील जूना (स्क्रबर)", qty: Math.max(4, Math.ceil(totalMeal / 250)), unit: "नग" },
+      { name: "पुराना सूती कपड़ा / कतरन (फटे कपड़े)", qty: Math.max(3, Math.ceil(totalMeal / 400)), unit: "Kg" },
+      { name: "रद्दी अखबार / पेपर", qty: Math.max(3, Math.ceil(totalMeal / 300)), unit: "Kg" },
+      { name: "वारदान (खाली बोरी)", qty: Math.max(4, Math.ceil(totalMeal / 300)), unit: "नग" },
+      { name: "एल्युमिनियम फॉयल रोल", qty: Math.max(1, Math.ceil(totalMeal / 800)), unit: "रोल" },
+      { name: "बर्तन साफ करने हेतु मजदूर", qty: Math.max(2, Math.ceil(totalMeal / 600)), unit: "व्यक्ति" }
+    ]}
   ];
 
-  let serial = 1;
+  renderParchiTable(items);
+}
+
+function renderParchiTable(sections) {
+  const container = document.getElementById("parchiTableContainer");
+  container.innerHTML = "";
 
   sections.forEach(sec => {
-    const itemsInSec = keys.filter(k => aggregated[k].cat === sec.key);
-    if (itemsInSec.length > 0) {
-      const secDiv = document.createElement("div");
-      secDiv.className = "cat-head";
-      secDiv.innerText = sec.title;
-      container.appendChild(secDiv);
+    const secHead = document.createElement("div");
+    secHead.className = "sec-row";
+    secHead.innerText = sec.sec;
+    container.appendChild(secHead);
 
-      const tbl = document.createElement("table");
-      tbl.innerHTML = `<thead><tr><th style="width: 50px;">क्र.</th><th>सामान का नाम (Brand & Item Name)</th><th style="width: 170px;">मात्रा (Quantity)</th></tr></thead><tbody></tbody>`;
-      const tbody = tbl.querySelector("tbody");
+    const tbl = document.createElement("table");
+    tbl.className = "parchi-table";
+    
+    // 2-कॉलम पेयर में रेंडर (कुल 4 कॉलम जैसे असली पर्ची में होता है)
+    let tbodyHtml = `<thead><tr>
+      <th style="width: 32%;">सामान का नाम</th>
+      <th style="width: 18%;">किलो / ग्राम / नग</th>
+      <th style="width: 32%;">सामान का नाम</th>
+      <th style="width: 18%;">किलो / ग्राम / नग</th>
+    </tr></thead><tbody>`;
 
-      itemsInSec.sort().forEach(itemName => {
-        const item = aggregated[itemName];
-        let val = (item.qty >= 10) ? Math.round(item.qty * 10) / 10 : Math.round(item.qty * 100) / 100;
-        
-        // तेल व घी के लिए टिन (15 लीटर/किलो) में कनवर्ट करके दिखाना
-        let extraTinInfo = "";
-        if (item.unit === "लीटर" || item.unit === "किलो") {
-          if (itemName.includes("तेल") || itemName.includes("घी")) {
-            const tins = Math.floor(val / 15);
-            const rem = Math.round((val % 15) * 10) / 10;
-            if (tins > 0) {
-              extraTinInfo = ` <strong>[${tins} टिन (15L)` + (rem > 0 ? ` + ${rem} ${item.unit} खुला]` : `]</strong>`);
-            }
-          }
-        }
+    const list = sec.list;
+    for (let i = 0; i < list.length; i += 2) {
+      const item1 = list[i];
+      const item2 = list[i + 1] || null;
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${serial++}</td><td><strong>${itemName}</strong></td><td>${val} ${item.unit}${extraTinInfo}</td>`;
-        tbody.appendChild(tr);
-      });
-
-      container.appendChild(tbl);
+      tbodyHtml += `<tr>
+        <td><strong>${item1.name}</strong></td>
+        <td class="qty-cell"><input class="qty-input" type="text" value="${item1.qty}"> ${item1.unit}</td>
+        <td>${item2 ? `<strong>${item2.name}</strong>` : ''}</td>
+        <td class="qty-cell">${item2 ? `<input class="qty-input" type="text" value="${item2.qty}"> ${item2.unit}` : ''}</td>
+      </tr>`;
     }
+
+    tbodyHtml += `</tbody>`;
+    tbl.innerHTML = tbodyHtml;
+    container.appendChild(tbl);
   });
 }
 
 function shareWhatsApp() {
-  const guests = document.getElementById("guestCount").value;
-  const tables = document.querySelectorAll("#parchiContent table");
-  if (tables.length === 0) {
-    alert("कृपया पहले कम से कम एक पकवान चुनें!");
-    return;
-  }
+  const client = document.getElementById("inClient").value;
+  const village = document.getElementById("inVillage").value;
+  const date = document.getElementById("inDate").value;
+  const nastaM = document.getElementById("inNastaMorn").value;
+  const nastaE = document.getElementById("inNastaEve").value;
+  const mealM = document.getElementById("inMealMorn").value;
+  const mealE = document.getElementById("inMealEve").value;
 
-  let text = `*शादी/कैटरिंग हलवाई कच्ची किराना पर्ची (${guests} व्यक्ति)*\n`;
-  text += document.getElementById("selectedDishesSummary").innerText + "\n\n";
+  let msg = `*॥ हलवाई कच्ची किराना पर्ची ॥*\n`;
+  msg += `*पार्टी:* ${client} (${village})\n`;
+  msg += `*दिनांक:* ${date}\n`;
+  msg += `*संख्या विवरण:*\n`;
+  msg += `• सुबह नाश्ता: ${nastaM} | शाम नाश्ता: ${nastaE}\n`;
+  msg += `• सुबह भोजन: ${mealM} | शाम भोजन: ${mealE}\n\n`;
+  msg += `*सामान की लिस्ट:*\n`;
 
-  const heads = document.querySelectorAll("#parchiContent .cat-head");
-  heads.forEach((h, idx) => {
-    text += `\n*${h.innerText}*\n`;
-    const rows = tables[idx].querySelectorAll("tbody tr");
-    rows.forEach(r => {
-      const cols = r.querySelectorAll("td");
-      text += `${cols[0].innerText}. ${cols[1].innerText} - ${cols[2].innerText}\n`;
+  const tables = document.querySelectorAll(".parchi-table");
+  const headers = document.querySelectorAll(".sec-row");
+
+  tables.forEach((tbl, idx) => {
+    msg += `\n*${headers[idx].innerText}*\n`;
+    const rows = tbl.querySelectorAll("tbody tr");
+    rows.forEach(tr => {
+      const cells = tr.querySelectorAll("td");
+      if (cells[0] && cells[0].innerText.trim()) {
+        const val1 = cells[1].querySelector("input") ? cells[1].querySelector("input").value : "";
+        const unit1 = cells[1].innerText.replace(val1, "").trim();
+        msg += `- ${cells[0].innerText.trim()}: ${val1} ${unit1}\n`;
+      }
+      if (cells[2] && cells[2].innerText.trim()) {
+        const val2 = cells[3].querySelector("input") ? cells[3].querySelector("input").value : "";
+        const unit2 = cells[3].innerText.replace(val2, "").trim();
+        msg += `- ${cells[2].innerText.trim()}: ${val2} ${unit2}\n`;
+      }
     });
   });
 
-  const url = "https://api.whatsapp.com/send?text=" + encodeURIComponent(text);
+  const url = "https://api.whatsapp.com/send?text=" + encodeURIComponent(msg);
   window.open(url, '_blank');
 }
 
-// 1200 व्यक्ति का टेस्ट लोड
-selectedDishes.add(1);  // गुलाब जामुन
-selectedDishes.add(3);  // काजू कतली
-selectedDishes.add(6);  // जलेबी
-selectedDishes.add(21); // शाही पनीर
-selectedDishes.add(28); // आलू गोभी मटर
-selectedDishes.add(42); // दाल तड़का
-selectedDishes.add(43); // गुजराती कढ़ी
-selectedDishes.add(44); // पकौड़ा कढ़ी
-selectedDishes.add(51); // सादा पूड़ी
-selectedDishes.add(72); // दाल कचौड़ी
-selectedDishes.add(75); // दही बड़ा
-selectedDishes.add(81); // वेज नूडल्स (सॉस आदि चेक करने के लिए)
-selectedDishes.add(91); // बूंदी रायता
-selectedDishes.add(93); // ग्रीन सलाद
-
-renderDishes();
-calculateKirana();
+// शुरुआत में लोड करें
+renderDishPills();
+calculateSheet();
 </script>
 
 </body>
