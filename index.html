@@ -467,6 +467,7 @@
         }
 
         // ================= 2. प्रोडक्ट वाइज सेल एनालिटिक्स =================
+                // ================= 2. प्रोडक्ट वाइज सेल एनालिटिक्स (सुधरा हुआ सुरक्षित कोड) =================
         async function fetchProductWiseSales() {
             const hotel = document.getElementById('salesHotelFilter').value;
             const sDate = document.getElementById('salesStartDate').value;
@@ -475,30 +476,42 @@
 
             tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">डेटा लोड हो रहा है...</td></tr>';
 
-            let url = `${SUPABASE_URL}/rest/v1/orders?select=items,total,created_at,store_code&order=created_at.desc`;
+            // URL तैयार करें
+            let url = `${SUPABASE_URL}/rest/v1/orders?select=*&order=created_at.desc`;
             if (hotel !== 'ALL') url += `&store_code=eq.${hotel}`;
             if (sDate) url += `&created_at=gte.${sDate}T00:00:00`;
             if (eDate) url += `&created_at=lte.${eDate}T23:59:59`;
 
             try {
                 const res = await fetch(url, { headers: apiHeaders });
-                const orders = await res.json();
+                const rawData = await res.json();
+
+                // यदि Supabase से कोई एरर आया हो
+                if (!res.ok || rawData.message || rawData.error) {
+                    throw new Error(rawData.message || rawData.error || 'Supabase टेबल एक्सेस एरर');
+                }
+
+                // पक्का करें कि डेटा एक वैध एरे (Array) ही हो
+                const orders = Array.isArray(rawData) ? rawData : [];
 
                 const productMap = {};
                 let grandTotalSales = 0;
                 let grandTotalQty = 0;
 
                 orders.forEach(ord => {
-                    let items = ord.items;
+                    // आपके डेटाबेस में कॉलम का नाम 'items' या 'order_items' या 'cart' हो सकता है
+                    let items = ord.items || ord.order_items || ord.cart || [];
+                    
                     if (typeof items === 'string') {
                         try { items = JSON.parse(items); } catch (_) { items = []; }
                     }
+
                     if (Array.isArray(items)) {
                         items.forEach(it => {
-                            const name = it.name || 'अन्य';
+                            const name = it.name || it.item_name || 'अन्य डिश';
                             const qty = Number(it.qty || it.quantity || 1);
-                            const price = Number(it.price || 0);
-                            const lineTotal = qty * price;
+                            const price = Number(it.price || it.rate || 0);
+                            const lineTotal = (qty * price) || Number(it.total || 0);
 
                             if (!productMap[name]) {
                                 productMap[name] = { name: name, qty: 0, revenue: 0 };
@@ -511,6 +524,47 @@
                         });
                     }
                 });
+
+                cachedSalesData = Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
+
+                // KPI कार्ड्स अपडेट
+                document.getElementById('kpiTotalRevenue').innerText = '₹' + grandTotalSales.toFixed(2);
+                document.getElementById('kpiTotalQty').innerText = grandTotalQty;
+                document.getElementById('kpiUniqueItems').innerText = cachedSalesData.length;
+
+                tbody.innerHTML = '';
+                if (cachedSalesData.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">इस चुनी गई अवधि में कोई बिक्री रिकॉर्ड नहीं मिला।</td></tr>';
+                    return;
+                }
+
+                cachedSalesData.forEach((p, index) => {
+                    const avgPrice = p.qty > 0 ? (p.revenue / p.qty).toFixed(1) : '0';
+                    const percentage = grandTotalSales > 0 ? ((p.revenue / grandTotalSales) * 100).toFixed(1) : 0;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td><b>${p.name}</b></td>
+                        <td>${p.qty}</td>
+                        <td>₹${avgPrice}</td>
+                        <td><b>₹${p.revenue.toFixed(2)}</b></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <div style="flex: 1; background: #e2e8f0; height: 6px; border-radius: 3px;">
+                                    <div style="background: #0284c7; width: ${percentage}%; height: 6px; border-radius: 3px;"></div>
+                                </div>
+                                <span style="font-size: 11px; color: #64748b;">${percentage}%</span>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">लोड एरर: ${err.message}</td></tr>`;
+            }
+        }
+
 
                 cachedSalesData = Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
 
