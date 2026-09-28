@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>सुपर एडमिन - होटल ERP व एनालिटिक्स</title>
-    <!-- Excel (XLSX) लाइब्रेरी -->
+    <title>सुपर एडमिन - AALA POS कंट्रोल रूम व ERP</title>
+    <!-- Excel (XLSX) लाइब्रेरी हिंदी सपोर्ट के साथ -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f1f5f9; margin: 0; padding: 16px; color: #1e293b; }
-        .container { max-width: 1300px; margin: 0 auto; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08); margin-bottom: 24px; border: 1px solid #e2e8f0; }
+        .container { max-width: 1320px; margin: 0 auto; }
+        .card { background: white; padding: 22px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08); margin-bottom: 24px; border: 1px solid #e2e8f0; }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
         @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } }
         .form-group { margin-bottom: 10px; }
         label { font-weight: 600; color: #334155; font-size: 13px; }
         label span { color: #ef4444; }
         input, select, textarea { padding: 9px 12px; width: 100%; box-sizing: border-box; margin-top: 4px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; }
-        input:focus, select:focus { border-color: #0284c7; ring: 2px #bae6fd; }
+        input:focus, select:focus { border-color: #0284c7; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 12px; }
         th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
@@ -34,7 +34,7 @@
         .btn-secondary { background: #64748b; }
         .btn-excel { background: #15803d; }
         .btn-pdf { background: #dc2626; }
-        .btn-small { padding: 4px 8px; font-size: 11px; border-radius: 4px; }
+        .btn-small { padding: 5px 9px; font-size: 11px; border-radius: 4px; }
 
         .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 16px; }
         .kpi-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; text-align: center; }
@@ -55,6 +55,9 @@
         .modal-content { background: white; margin: 4% auto; padding: 22px; width: 90%; max-width: 820px; max-height: 85vh; overflow-y: auto; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
         .close { float: right; font-size: 26px; cursor: pointer; color: #ef4444; font-weight: bold; }
 
+        .partner-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-top: 14px; }
+        .partner-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+
         @media print {
             body { background: white; padding: 0; }
             .no-print, header, .btn, .filter-row, #statusAlert { display: none !important; }
@@ -71,7 +74,7 @@
 
         <div id="statusAlert" class="no-print"></div>
 
-        <!-- 1. होटल रजिस्ट्रेशन व मास्टर प्रोफाइल -->
+        <!-- 1. होटल रजिस्ट्रेशन व मल्टी-पार्टनर सेटअप (Double-Lock Config) -->
         <div class="card no-print">
             <h2 id="formHeading">🏨 नया होटल रजिस्टर / अपडेट करें</h2>
             <input type="hidden" id="editingStoreCode" value="">
@@ -86,8 +89,8 @@
                     <input type="text" id="storeCode" placeholder="उदा. 111 या ROY01">
                 </div>
                 <div class="form-group">
-                    <label>मास्टर लॉगिन पिन (PIN): <span>*</span></label>
-                    <input type="text" id="masterPin" placeholder="4 अंकों का मास्टर पिन">
+                    <label>🔒 ताला 1: स्टोर साझा मास्टर पिन: <span>*</span></label>
+                    <input type="text" id="masterPin" maxlength="4" placeholder="4 अंकों का साझा पिन (उदा. 9999)">
                 </div>
                 <div class="form-group">
                     <label>कुल टेबल्स:</label>
@@ -98,15 +101,15 @@
                     <input type="text" id="phone" placeholder="उदा. 9876543210">
                 </div>
                 <div class="form-group">
-                    <label>UPI ID (QR पेमेंट हेतु):</label>
+                    <label>UPI ID (QR बिल हेतु):</label>
                     <input type="text" id="upiId" placeholder="उदा. hotel@upi">
                 </div>
                 <div class="form-group">
-                    <label>GSTIN नंबर:</label>
+                    <label>GSTIN नंबर (वैकल्पिक):</label>
                     <input type="text" id="gstNumber" placeholder="उदा. 22AAAAA0000A1Z5">
                 </div>
                 <div class="form-group">
-                    <label>FSSAI लाइसेंस नंबर:</label>
+                    <label>FSSAI नंबर (वैकल्पिक):</label>
                     <input type="text" id="fssaiNumber" placeholder="14 अंकों का नंबर">
                 </div>
             </div>
@@ -116,8 +119,23 @@
                 <input type="text" id="address" placeholder="दुकान/स्थान, सड़क, शहर, राज्य">
             </div>
 
-            <div style="margin-top: 10px; display: flex; gap: 10px;">
-                <button class="btn btn-green" id="submitBtn" onclick="registerHotel()">होटल सुरक्षित करें</button>
+            <!-- पार्टनर्स ब्लॉक (सुपर एडमिन द्वारा नियंत्रित) -->
+            <div class="partner-box">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div>
+                        <b style="color: #0f172a; font-size: 14px;">🤝 पार्टनर्स सूची व व्यक्तिगत पिन (ताला 2)</b>
+                        <div style="font-size: 11px; color: #64748b;">काउंटर ऐप में लॉगिन के समय स्टोर पिन के बाद पार्टनर अपना यह पिन डालेगा।</div>
+                    </div>
+                    <button type="button" class="btn btn-blue btn-small" onclick="addPartnerRow()">+ पार्टनर जोड़ें</button>
+                </div>
+                
+                <div id="partnersContainer">
+                    <!-- पार्टनर रोज़ यहाँ जुड़ेंगी -->
+                </div>
+            </div>
+
+            <div style="margin-top: 16px; display: flex; gap: 10px;">
+                <button class="btn btn-green" id="submitBtn" onclick="registerHotel()">होटल व पार्टनर्स सुरक्षित करें</button>
                 <button class="btn btn-secondary" id="cancelEditBtn" onclick="cancelEdit()" style="display: none;">रद्द करें</button>
             </div>
         </div>
@@ -192,7 +210,7 @@
         <div class="card no-print">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h2>🏆 स्टार वेटर रैंकिंग व इंसेंटिव (Waiter Performance)</h2>
-                <span class="badge badge-amber" style="font-size: 13px;">1% कमीशन पॉलिसी</span>
+                <span class="badge badge-amber" style="font-size: 13px;">1% इंसेंटिव ट्रैकिंग</span>
             </div>
             <div style="overflow-x: auto;">
                 <table>
@@ -251,7 +269,7 @@
             </div>
         </div>
 
-        <!-- 5. रजिस्टर्ड होटल लिस्ट -->
+        <!-- 5. रजिस्टर्ड होटल ERP लिस्ट -->
         <div class="card no-print">
             <h2>📋 सभी रजिस्टर्ड रेस्टोरेंट / होटल ERP</h2>
             <div style="overflow-x: auto;">
@@ -261,9 +279,9 @@
                             <th>स्टोर कोड</th>
                             <th>होटल नाम व पता</th>
                             <th>टेबल्स</th>
-                            <th>पिन</th>
+                            <th>स्टोर पिन (ताला 1)</th>
                             <th>GST / FSSAI</th>
-                            <th>पार्टनर्स लेज़र</th>
+                            <th>पार्टनर्स (ताला 2)</th>
                             <th>स्टेटस</th>
                             <th>एक्शन</th>
                         </tr>
@@ -284,10 +302,10 @@
             
             <div id="partnerSummaryCard" style="background: #f8fafc; padding: 12px; border-radius: 8px; margin: 12px 0; border: 1px solid #e2e8f0;"></div>
 
-            <h3>पार्टनर डायरेक्टरी</h3>
+            <h3>पार्टनर डायरेक्टरी (सुपर एडमिन पंजीकृत)</h3>
             <table id="partnerTable">
                 <thead>
-                    <tr><th>पार्टनर नाम</th><th>ID</th><th>शेयर %</th><th>पिन</th><th>फ़ोन</th></tr>
+                    <tr><th>पार्टनर नाम</th><th>ID</th><th>शेयर %</th><th>पिन (ताला 2)</th><th>फ़ोन</th></tr>
                 </thead>
                 <tbody id="partnerBody"></tbody>
             </table>
@@ -315,6 +333,7 @@
         let cachedHotels = [];
         let cachedSalesData = [];
         let cachedRationData = [];
+        let partnerRowCount = 0;
 
         function showMessage(text, isError = false) {
             const alertBox = document.getElementById('statusAlert');
@@ -326,7 +345,24 @@
             setTimeout(() => { alertBox.style.display = 'none'; }, 6000);
         }
 
-        // ================= 1. होटल मास्टर मैनेजमेंट =================
+        // ================= 1. डायनामिक पार्टनर रोज़ =================
+        function addPartnerRow(name = '', pin = '', share = '50', phone = '') {
+            partnerRowCount++;
+            const container = document.getElementById('partnersContainer');
+            const div = document.createElement('div');
+            div.className = 'partner-row';
+            div.id = `p_row_${partnerRowCount}`;
+            div.innerHTML = `
+                <input type="text" placeholder="पार्टनर नाम (उदा. गोविंद)" value="${name}" class="p-name" style="flex: 2;" required>
+                <input type="text" placeholder="4-अंक पिन" value="${pin}" maxlength="4" class="p-pin" style="flex: 1.2;" required>
+                <input type="number" placeholder="शेयर %" value="${share}" class="p-share" style="flex: 1;" required>
+                <input type="text" placeholder="फ़ोन नंबर" value="${phone}" class="p-phone" style="flex: 1.5;">
+                <button type="button" class="btn btn-red btn-small" onclick="document.getElementById('p_row_${partnerRowCount}').remove()">✕</button>
+            `;
+            container.appendChild(div);
+        }
+
+        // ================= 2. होटल व पार्टनर रजिस्ट्रेशन =================
         async function registerHotel() {
             const editingCode = document.getElementById('editingStoreCode').value.trim();
             const name = document.getElementById('hotelName').value.trim();
@@ -340,7 +376,13 @@
             const fssai = document.getElementById('fssaiNumber').value.trim() || null;
 
             if (!name || !code || !pin) {
-                alert("कृपया होटल का नाम, स्टोर कोड और पिन अनिवार्य रूप से भरें!");
+                alert("कृपया होटल का नाम, स्टोर कोड और स्टोर मास्टर पिन अनिवार्य रूप से भरें!");
+                return;
+            }
+
+            const partnerRows = document.querySelectorAll('#partnersContainer > .partner-row');
+            if (partnerRows.length === 0) {
+                alert("कृपया कम से कम 1 पार्टनर (नाम व 4-अंक पिन) अवश्य जोड़ें!");
                 return;
             }
 
@@ -348,7 +390,7 @@
             btn.innerText = "सेव हो रहा है...";
             btn.disabled = true;
 
-            const payload = {
+            const hotelPayload = {
                 store_code: code,
                 name: name,
                 pin: pin,
@@ -363,38 +405,69 @@
             };
 
             try {
-                let res;
+                // 1. होटल सेव करना
                 if (editingCode) {
-                    res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?store_code=eq.${editingCode}`, {
+                    await fetch(`${SUPABASE_URL}/rest/v1/restaurants?store_code=eq.${editingCode}`, {
                         method: 'PATCH',
                         headers: { ...apiHeaders, 'Prefer': 'return=representation' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify(hotelPayload)
                     });
                 } else {
-                    res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?on_conflict=store_code`, {
+                    await fetch(`${SUPABASE_URL}/rest/v1/restaurants?on_conflict=store_code`, {
                         method: 'POST',
                         headers: { ...apiHeaders, 'Prefer': 'resolution=merge-duplicates,return=representation' },
-                        body: JSON.stringify([payload])
+                        body: JSON.stringify([hotelPayload])
                     });
                 }
 
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.message || 'डेटा सुरक्षित नहीं हुआ');
+                // 2. पार्टनर्स तैयार करना व सेव करना
+                const partnersToSave = [];
+                partnerRows.forEach((row, idx) => {
+                    const pName = row.querySelector('.p-name').value.trim();
+                    const pPin = row.querySelector('.p-pin').value.trim();
+                    const pShare = parseFloat(row.querySelector('.p-share').value.trim()) || 0;
+                    const pPhone = row.querySelector('.p-phone').value.trim();
+
+                    if (pName && pPin) {
+                        partnersToSave.push({
+                            store_code: code,
+                            partner_id: `P${idx + 1}`,
+                            partner_name: pName,
+                            login_pin: pPin,
+                            share_percentage: pShare,
+                            phone: pPhone,
+                            is_active: true
+                        });
+                    }
+                });
+
+                if (editingCode) {
+                    await fetch(`${SUPABASE_URL}/rest/v1/restaurant_partners?store_code=eq.${editingCode}`, {
+                        method: 'DELETE',
+                        headers: apiHeaders
+                    });
                 }
 
-                showMessage(`होटल [${code}] का विवरण सुरक्षित हो गया!`);
+                if (partnersToSave.length > 0) {
+                    await fetch(`${SUPABASE_URL}/rest/v1/restaurant_partners`, {
+                        method: 'POST',
+                        headers: { ...apiHeaders, 'Prefer': 'return=representation' },
+                        body: JSON.stringify(partnersToSave)
+                    });
+                }
+
+                showMessage(`होटल [${code}] व पार्टनर्स का विवरण सुरक्षित हो गया!`);
                 cancelEdit();
                 await loadRestaurants();
             } catch (err) {
                 showMessage("एरर: " + err.message, true);
             } finally {
-                btn.innerText = "होटल सुरक्षित करें";
+                btn.innerText = "होटल व पार्टनर्स सुरक्षित करें";
                 btn.disabled = false;
             }
         }
 
-        function startEdit(code) {
+        async function startEdit(code) {
             const h = cachedHotels.find(item => item.store_code === code);
             if (!h) return;
 
@@ -409,7 +482,25 @@
             document.getElementById('gstNumber').value = h.gst_number || '';
             document.getElementById('fssaiNumber').value = h.fssai_number || '';
 
-            document.getElementById('formHeading').innerText = `✏️ होटल एडिट करें (${h.store_code})`;
+            // पार्टनर्स लोड करना
+            const container = document.getElementById('partnersContainer');
+            container.innerHTML = 'लोड हो रहा है...';
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurant_partners?store_code=eq.${code}&order=partner_id.asc`, { headers: apiHeaders });
+                const partners = await res.json();
+                container.innerHTML = '';
+                if (partners && partners.length > 0) {
+                    partners.forEach(p => addPartnerRow(p.partner_name, p.login_pin, p.share_percentage, p.phone || ''));
+                } else {
+                    addPartnerRow('', '', '100', '');
+                }
+            } catch (_) {
+                container.innerHTML = '';
+                addPartnerRow('', '', '100', '');
+            }
+
+            document.getElementById('formHeading').innerText = `✏️ होटल व पार्टनर्स एडिट करें (${h.store_code})`;
             document.getElementById('submitBtn').innerText = 'अपडेट करें';
             document.getElementById('cancelEditBtn').style.display = 'inline-block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -427,8 +518,12 @@
             document.getElementById('gstNumber').value = '';
             document.getElementById('fssaiNumber').value = '';
 
+            document.getElementById('partnersContainer').innerHTML = '';
+            addPartnerRow('गोविंद', '1212', '50', '');
+            addPartnerRow('राहुल', '1580', '50', '');
+
             document.getElementById('formHeading').innerText = '🏨 नया होटल रजिस्टर / अपडेट करें';
-            document.getElementById('submitBtn').innerText = 'होटल सुरक्षित करें';
+            document.getElementById('submitBtn').innerText = 'होटल व पार्टनर्स सुरक्षित करें';
             document.getElementById('cancelEditBtn').style.display = 'none';
         }
 
@@ -436,16 +531,14 @@
             const tbody = document.getElementById('restaurantBody');
             const selectFilter = document.getElementById('salesHotelFilter');
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?select=*&order=created_at.desc`, {
-                    headers: apiHeaders
-                });
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/restaurants?select=*&order=created_at.desc`, { headers: apiHeaders });
                 const data = await res.json();
                 cachedHotels = Array.isArray(data) ? data : [];
                 tbody.innerHTML = '';
                 selectFilter.innerHTML = '<option value="ALL">सभी होटल (All Stores)</option>';
 
                 if (cachedHotels.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">अभी कोई होटल रजिस्टर नहीं है।</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">अभी कोई होटल पंजीकृत नहीं है।</td></tr>';
                     return;
                 }
 
@@ -470,7 +563,7 @@
                             <div style="font-size: 11px;">FSSAI: ${r.fssai_number || '-'}</div>
                         </td>
                         <td>
-                            <button class="btn btn-indigo btn-small" onclick="viewPartnerLedger('${r.store_code}', '${r.name}')">🤝 पार्टनर्स</button>
+                            <button class="btn btn-indigo btn-small" onclick="viewPartnerLedger('${r.store_code}', '${r.name}')">🤝 पार्टनर्स लेज़र</button>
                         </td>
                         <td><span class="badge ${r.is_active ? 'badge-green' : 'badge-red'}">${r.is_active ? 'चालू' : 'ब्लॉक'}</span></td>
                         <td>
@@ -499,7 +592,7 @@
             } catch (err) { showMessage("डिलीट एरर: " + err.message, true); }
         }
 
-        // ================= 2. इनवॉइस व आइटम-वाइज सेल्स एनालिटिक्स =================
+        // ================= 3. इनवॉइस व सेल्स एनालिटिक्स =================
         async function fetchProductWiseSales() {
             const hotel = document.getElementById('salesHotelFilter').value;
             const sDate = document.getElementById('salesStartDate').value;
@@ -527,7 +620,6 @@
                 let upiSales = 0;
                 let totalQty = 0;
 
-                // KPI गणना
                 invoices.forEach(inv => {
                     const amt = Number(inv.final_amount || 0);
                     totalRevenue += amt;
@@ -542,7 +634,6 @@
                 document.getElementById('kpiCashSales').innerText = '₹' + cashSales.toFixed(2);
                 document.getElementById('kpiUpiSales').innerText = '₹' + upiSales.toFixed(2);
 
-                // आइटम एग्रीगेशन
                 const validInvoiceIds = new Set(invoices.map(i => i.id));
                 const productMap = {};
 
@@ -568,7 +659,7 @@
 
                 tbody.innerHTML = '';
                 if (cachedSalesData.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">इस अवधि में कोई इनवॉइस रिकॉर्ड नहीं मिला।</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">इस अवधि में कोई बिक्री रिकॉर्ड नहीं मिला।</td></tr>';
                     return;
                 }
 
@@ -596,14 +687,13 @@
                     tbody.appendChild(tr);
                 });
 
-                // साथ में स्टार वेटर एनालिटिक्स भी अपडेट करें
                 updateWaiterLeaderboard(invoices);
             } catch (err) {
                 tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">लोड एरर: ${err.message}</td></tr>`;
             }
         }
 
-        // ================= 3. स्टार वेटर लीडरबोर्ड =================
+        // ================= 4. स्टार वेटर लीडरबोर्ड =================
         function updateWaiterLeaderboard(invoices) {
             const tbody = document.getElementById('waiterLeaderboardBody');
             const waiterMap = {};
@@ -646,7 +736,7 @@
             });
         }
 
-        // ================= 4. स्मार्ट राशन मांग व वेंडर ऑडिट =================
+        // ================= 5. स्मार्ट राशन मांग व वेंडर ऑडिट =================
         async function loadAllRationDemands() {
             const tbody = document.getElementById('allRationBody');
             const filterDate = document.getElementById('dateFilter').value;
@@ -688,7 +778,7 @@
             }
         }
 
-        // ================= 5. पार्टनर लेज़र व प्रॉफिट-स्प्लिट मोडल =================
+        // ================= 6. पार्टनर लेज़र व प्रॉफिट-स्प्लिट मोडल =================
         async function viewPartnerLedger(storeCode, hotelName) {
             document.getElementById('partnerModalTitle').innerText = `🤝 ${hotelName} (${storeCode}) - पार्टनर लेज़र व लाभ बंटवारा`;
             const summaryBox = document.getElementById('partnerSummaryCard');
@@ -702,7 +792,7 @@
 
             try {
                 const [partnersRes, ledgerRes, invoiceRes] = await Promise.all([
-                    fetch(`${SUPABASE_URL}/rest/v1/restaurant_partners?store_code=eq.${storeCode}`, { headers: apiHeaders }),
+                    fetch(`${SUPABASE_URL}/rest/v1/restaurant_partners?store_code=eq.${storeCode}&order=partner_id.asc`, { headers: apiHeaders }),
                     fetch(`${SUPABASE_URL}/rest/v1/partner_ledger?store_code=eq.${storeCode}&order=created_at.desc`, { headers: apiHeaders }),
                     fetch(`${SUPABASE_URL}/rest/v1/invoices?store_code=eq.${storeCode}`, { headers: apiHeaders })
                 ]);
@@ -738,7 +828,7 @@
 
                 feedTbody.innerHTML = '';
                 if (ledger.length === 0) {
-                    feedTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">अभी कोई लेज़र ट्रांजैक्शन नहीं है।</td></tr>';
+                    feedTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">अभी कोई लेज़र लेन-देन नहीं है।</td></tr>';
                 } else {
                     ledger.forEach(l => {
                         const isPocket = l.type === 'POCKET_EXPENSE';
@@ -762,7 +852,7 @@
             document.getElementById('partnerModal').style.display = 'none';
         }
 
-        // ================= 6. एक्सेल व प्रिंट एक्सपोर्ट =================
+        // ================= 7. एक्सेल व प्रिंट एक्सपोर्ट =================
         function exportSalesToExcel() {
             if (cachedSalesData.length === 0) return alert('डाउनलोड के लिए बिक्री डेटा नहीं है!');
             const rows = cachedSalesData.map((it, idx) => ({
@@ -817,6 +907,7 @@
             document.getElementById('salesStartDate').value = todayStr;
             document.getElementById('salesEndDate').value = todayStr;
 
+            cancelEdit();
             loadRestaurants();
             loadAllRationDemands();
             fetchProductWiseSales();
