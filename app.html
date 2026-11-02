@@ -410,36 +410,68 @@
             document.getElementById(`qty-${id}`).innerText = tempCart[id];
         }
 
+        let isSubmittingWaiterOrder = false;
+
         async function submitWaiterOrder() {
+            if (isSubmittingWaiterOrder) return;
+            if (!loggedSession || !loggedSession.storeCode) {
+                alert("लॉगिन सत्र नहीं मिला। दोबारा लॉगिन करें।");
+                return;
+            }
+
+            const tableNo = currentSelectedTable;
             const newItems = [];
-            for (let id in tempCart) {
-                if (tempCart[id] > 0) {
-                    const item = hotelMenu.find(m => m.id == id);
-                    newItems.push({ name: item.name, price: item.price, qty: tempCart[id] });
+            for (const id of Object.keys(tempCart)) {
+                const qty = Number(tempCart[id]);
+                if (!Number.isInteger(qty) || qty <= 0) continue;
+                const item = hotelMenu.find(m => String(m.id) === String(id));
+                if (!item || !String(item.name || '').trim()) {
+                    alert("मेन्यू का एक सामान नहीं मिला। ऑर्डर भेजने से पहले मेन्यू फिर जाँचें।");
+                    return;
                 }
+                const price = Number(item.price);
+                if (!Number.isFinite(price) || price < 0) {
+                    alert("मेन्यू में कीमत अमान्य है। ऑर्डर नहीं भेजा गया।");
+                    return;
+                }
+                newItems.push({ name: String(item.name).trim(), price, qty });
             }
 
             if (newItems.length === 0) return alert("कृपया सामान चुनें!");
 
-            if (!activeOrders[currentSelectedTable]) activeOrders[currentSelectedTable] = [];
-            activeOrders[currentSelectedTable].push(...newItems);
-            tableStatus[currentSelectedTable] = 'running';
+            isSubmittingWaiterOrder = true;
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/hotel_kots`, {
+                    method: 'POST',
+                    headers: apiHeaders,
+                    body: JSON.stringify([{
+                        store_code: loggedSession.storeCode,
+                        table_no: tableNo,
+                        items: JSON.stringify(newItems),
+                        status: 'pending',
+                        source: 'WAITER'
+                    }])
+                });
 
-            await fetch(`${SUPABASE_URL}/rest/v1/hotel_kots`, {
-                method: 'POST',
-                headers: apiHeaders,
-                body: JSON.stringify([{
-                    store_code: loggedSession ? loggedSession.storeCode : '111',
-                    table_no: currentSelectedTable,
-                    items: JSON.stringify(newItems),
-                    status: 'pending'
-                }])
-            });
+                if (!response.ok) {
+                    const details = await response.text();
+                    throw new Error('HTTP ' + response.status + ': ' + details.slice(0, 240));
+                }
 
-            closeModal();
-            renderTables();
-            renderCookKOTs();
-            speakHindi(`टेबल ${currentSelectedTable} पर नया ऑर्डर आया है`);
+                if (!activeOrders[tableNo]) activeOrders[tableNo] = [];
+                activeOrders[tableNo].push(...newItems);
+                tableStatus[tableNo] = 'running';
+                tempCart = {};
+                closeModal();
+                renderTables();
+                renderCookKOTs();
+                speakHindi(`टेबल ${tableNo} पर नया ऑर्डर सर्वर में सेव हुआ है`);
+            } catch (error) {
+                console.error('Waiter order submission failed:', error);
+                alert("ऑर्डर सर्वर में सेव नहीं हुआ। स्थानीय ऑर्डर सूची नहीं बदली गई। दोबारा कोशिश करें।\n" + (error.message || error));
+            } finally {
+                isSubmittingWaiterOrder = false;
+            }
         }
 
         function markTableFoodDone() {
