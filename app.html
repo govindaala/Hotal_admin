@@ -327,10 +327,67 @@
             }
 
             renderTables();
+            loadActiveTableOrders();
             renderMasterMenu();
             renderPresetRations();
             renderCookKOTs();
             loadMasterRationDemands();
+        }
+
+        // Reload unsettled KOTs so open bills survive a browser refresh.
+        async function loadActiveTableOrders() {
+            if (!loggedSession || !loggedSession.storeCode) return;
+            try {
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/hotel_kots?store_code=eq.${encodeURIComponent(loggedSession.storeCode)}&status=neq.settled&order=created_at.asc`,
+                    { headers: apiHeaders }
+                );
+                if (!response.ok) {
+                    const details = await response.text();
+                    throw new Error('HTTP ' + response.status + ': ' + details.slice(0, 200));
+                }
+                const rows = await response.json();
+                if (!Array.isArray(rows)) throw new Error('सर्वर से KOT सूची सही नहीं मिली');
+
+                const restoredOrders = {};
+                const restoredStatuses = {};
+                for (const kot of rows) {
+                    const tableNo = Number(kot.table_no);
+                    if (!Number.isInteger(tableNo) || tableNo < 1 || tableNo > 10) continue;
+                    let items;
+                    try {
+                        items = Array.isArray(kot.items) ? kot.items : JSON.parse(kot.items || '[]');
+                    } catch (_) {
+                        throw new Error('टेबल ' + tableNo + ' का KOT डेटा पढ़ा नहीं जा सका');
+                    }
+                    if (!Array.isArray(items)) throw new Error('टेबल ' + tableNo + ' के KOT आइटम अमान्य हैं');
+
+                    if (!restoredOrders[tableNo]) restoredOrders[tableNo] = [];
+                    for (const item of items) {
+                        const name = String(item.name || item.item_name || '').trim();
+                        const price = Number(item.price);
+                        const qty = Number(item.qty);
+                        if (!name || !Number.isFinite(price) || price < 0 || !Number.isInteger(qty) || qty <= 0) {
+                            throw new Error('टेबल ' + tableNo + ' के KOT में अमान्य आइटम है');
+                        }
+                        restoredOrders[tableNo].push({ name, price, qty, category: item.category || item.cat || 'General' });
+                    }
+                    if (String(kot.status).toLowerCase() === 'ready') {
+                        restoredStatuses[tableNo] = 'bill_ready';
+                    } else if (!restoredStatuses[tableNo]) {
+                        restoredStatuses[tableNo] = 'running';
+                    }
+                }
+
+                Object.keys(activeOrders).forEach(key => delete activeOrders[key]);
+                Object.keys(tableStatus).forEach(key => delete tableStatus[key]);
+                Object.assign(activeOrders, restoredOrders);
+                Object.assign(tableStatus, restoredStatuses);
+                renderTables();
+            } catch (error) {
+                console.error('Unable to restore active table orders:', error);
+                alert('पुराने ऑर्डर सर्वर से लोड नहीं हो पाए। बिल सेटल करने से पहले इंटरनेट और सर्वर की स्थिति जाँचें।\n' + (error.message || error));
+            }
         }
 
         // --- टेबल व ऑर्डर लॉजिक ---
