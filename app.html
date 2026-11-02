@@ -496,19 +496,25 @@
         }
 
         // --- कुक KDS लॉजिक ---
+        const busyKotIds = new Set();
+
         async function renderCookKOTs() {
             const container = document.getElementById('cook-kot-container');
             if (!container || !loggedSession) return;
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/hotel_kots?store_code=eq.${loggedSession.storeCode}&status=eq.pending&order=created_at.desc`, { headers: apiHeaders });
-            const data = await res.json();
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/hotel_kots?store_code=eq.${encodeURIComponent(loggedSession.storeCode)}&status=eq.pending&order=created_at.desc`, { headers: apiHeaders });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (!Array.isArray(data)) throw new Error('सर्वर से गलत KOT डेटा मिला');
 
-            if (!data || data.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">कोई नया KOT नहीं है 👨‍🍳</div>';
-                return;
-            }
+                if (data.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">कोई नया KOT नहीं है 👨‍🍳</div>';
+                    return;
+                }
 
-            container.innerHTML = data.map(kot => {
-                const items = JSON.parse(kot.items);
+                container.innerHTML = data.map(kot => {
+                const items = Array.isArray(kot.items) ? kot.items : JSON.parse(kot.items || '[]');
+                if (!Array.isArray(items)) throw new Error('KOT items सूची सही नहीं है');
                 return `
                     <div class="card" style="border-left: 6px solid #0d9488;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -519,17 +525,34 @@
                         ${items.map(it => `<div style="font-size:16px;"><b>${it.name}</b> x ${it.qty}</div>`).join('')}
                     </div>
                 `;
-            }).join('');
+                }).join('');
+            } catch (error) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#b91c1c;">KOT लोड नहीं हुए। कनेक्शन जाँचें।</div>';
+                console.error('KOT load failed:', error);
+            }
         }
 
         async function markOrderReady(kotId, tableNo) {
-            await fetch(`${SUPABASE_URL}/rest/v1/hotel_kots?id=eq.${kotId}`, {
-                method: 'PATCH',
-                headers: apiHeaders,
-                body: JSON.stringify({ status: 'ready' })
-            });
-            renderCookKOTs();
-            speakHindi(`टेबल ${tableNo} का ऑर्डर तैयार है`);
+            if (busyKotIds.has(kotId)) return;
+            busyKotIds.add(kotId);
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/hotel_kots?id=eq.${encodeURIComponent(kotId)}`, {
+                    method: 'PATCH',
+                    headers: { ...apiHeaders, 'Prefer': 'return=representation' },
+                    body: JSON.stringify({ status: 'ready' })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const updated = await res.json();
+                if (!Array.isArray(updated) || updated.length === 0) {
+                    throw new Error('KOT रिकॉर्ड नहीं मिला; स्थिति नहीं बदली');
+                }
+                await renderCookKOTs();
+                speakHindi(`टेबल ${tableNo} का ऑर्डर तैयार है`);
+            } catch (error) {
+                alert('KOT तैयार मार्क नहीं हुआ: ' + error.message);
+            } finally {
+                busyKotIds.delete(kotId);
+            }
         }
 
         // --- राशन मांग ---
@@ -563,58 +586,82 @@
 
             if (selected.length === 0) return alert("कृपया सामान चुनें!");
 
-            await fetch(`${SUPABASE_URL}/rest/v1/ration_demands`, {
-                method: 'POST',
-                headers: apiHeaders,
-                body: JSON.stringify(selected)
-            });
-
-            alert("मांग भेज दी गई!");
-            loadMasterRationDemands();
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/ration_demands`, {
+                    method: 'POST',
+                    headers: apiHeaders,
+                    body: JSON.stringify(selected)
+                });
+                if (!res.ok) {
+                    const detail = await res.text();
+                    throw new Error(`HTTP ${res.status}: ${detail}`);
+                }
+                alert("मांग सफलतापूर्वक भेज दी गई!");
+                await loadMasterRationDemands();
+            } catch (error) {
+                alert("राशन मांग नहीं भेजी गई। कृपया कनेक्शन जाँचें: " + error.message);
+            }
         }
 
         async function loadMasterRationDemands() {
             const div = document.getElementById('master-ration-list');
             if (!div || !loggedSession) return;
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/ration_demands?store_code=eq.${loggedSession.storeCode}&order=created_at.desc`, { headers: apiHeaders });
-            const data = await res.json();
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/ration_demands?store_code=eq.${encodeURIComponent(loggedSession.storeCode)}&order=created_at.desc`, { headers: apiHeaders });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (!Array.isArray(data)) throw new Error('सर्वर से गलत डेटा मिला');
 
-            if (!data || data.length === 0) {
-                div.innerHTML = '<div style="color:#64748b; padding:10px;">कोई मांग दर्ज नहीं है।</div>';
-                return;
-            }
+                if (data.length === 0) {
+                    div.innerHTML = '<div style="color:#64748b; padding:10px;">कोई मांग दर्ज नहीं है।</div>';
+                    return;
+                }
 
-            const tenDaysAgo = new Date();
-            tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
-            const recentData = data.filter(d => new Date(d.created_at) >= tenDaysAgo);
+                const tenDaysAgo = new Date();
+                tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+                const recentData = data.filter(d => new Date(d.created_at) >= tenDaysAgo);
 
-            div.innerHTML = recentData.map(d => {
-                const isReceived = d.quantity.includes('(आ गया)');
-                const dateStr = new Date(d.created_at).toLocaleDateString('hi-IN');
-                return `
+                if (recentData.length === 0) {
+                    div.innerHTML = '<div style="color:#64748b; padding:10px;">पिछले 10 दिनों में कोई मांग नहीं है।</div>';
+                    return;
+                }
+
+                div.innerHTML = recentData.map(d => {
+                    // Flutter app uses is_received as the shared status field.
+                    const isReceived = d.is_received === true;
+                    const dateStr = new Date(d.created_at).toLocaleDateString('hi-IN');
+                    return `
                     <div class="ration-item ${isReceived ? 'ration-received' : ''}">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div>
                                 <b>${d.item_name}</b> - ${d.quantity}
                                 <div style="font-size:11px; color:#64748b;">दिनांक: ${dateStr}</div>
                             </div>
-                            <button class="btn ${isReceived ? 'btn-green' : 'btn-orange'}" onclick="toggleRationReceived('${d.id}', '${d.quantity}')">
+                            <button class="btn ${isReceived ? 'btn-green' : 'btn-orange'}" onclick="toggleRationReceived('${d.id}', ${isReceived})">
                                 ${isReceived ? '✓ आ गया' : 'पेंडिंग'}
                             </button>
                         </div>
                     </div>
                 `;
-            }).join('');
+                }).join('');
+            } catch (error) {
+                div.innerHTML = '<div style="color:#b91c1c; padding:10px;">राशन सूची लोड नहीं हुई। रीफ्रेश करें।</div>';
+                console.error('Ration demand load failed:', error);
+            }
         }
 
-        async function toggleRationReceived(id, currentQty) {
-            const newQty = currentQty.includes('(आ गया)') ? currentQty.replace(' (आ गया)', '') : currentQty + ' (आ गया)';
-            await fetch(`${SUPABASE_URL}/rest/v1/ration_demands?id=eq.${id}`, {
-                method: 'PATCH',
-                headers: apiHeaders,
-                body: JSON.stringify({ quantity: newQty })
-            });
-            loadMasterRationDemands();
+        async function toggleRationReceived(id, isReceived) {
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/ration_demands?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: apiHeaders,
+                    body: JSON.stringify({ is_received: !isReceived })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                await loadMasterRationDemands();
+            } catch (error) {
+                alert('रिसीव स्थिति अपडेट नहीं हुई। कृपया इंटरनेट/डेटाबेस जाँचें: ' + error.message);
+            }
         }
 
         setInterval(() => {
