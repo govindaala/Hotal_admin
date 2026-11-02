@@ -215,6 +215,8 @@
         let presetRations = JSON.parse(localStorage.getItem('app_rations')) || ['आटा', 'चावल', 'तेल', 'पनीर', 'शक्कर'];
         let activeOrders = {};
         let tableStatus = {};
+        // Keep the same bill number when a settlement request must be retried.
+        const pendingSettlementBillNos = {};
         let currentSelectedTable = 1;
         let tempCart = {};
 
@@ -447,19 +449,104 @@
             speakHindi(`टेबल ${currentSelectedTable} का खाना पूरा हो गया है, बिल तैयार है`);
         }
 
-        async function settleBillMaster() {
-            delete activeOrders[currentSelectedTable];
-            delete tableStatus[currentSelectedTable];
-            await fetch(`${SUPABASE_URL}/rest/v1/hotel_kots?store_code=eq.${loggedSession.storeCode}&table_no=eq.${currentSelectedTable}`, {
-                method: 'PATCH',
-                headers: apiHeaders,
-                body: JSON.stringify({ status: 'settled' })
-            });
-            closeModal();
-            renderTables();
-            alert(`टेबल T-${currentSelectedTable} का बिल सेटल हो गया! पर्ची प्रिंट हो गई।`);
-        }
+        let isSettlingBill = false;
 
+        async function settleBillMaster() {
+            if (isSettlingBill) return;
+            if (!loggedSession || !loggedSession.storeCode) {
+                alert('लॉगिन सत्र नहीं मिला। दोबारा लॉगिन करें।');
+                return;
+            }
+
+            const tableNo = currentSelectedTable;
+            const items = activeOrders[tableNo] || [];
+            if (!items.length) {
+                alert('इस टेबल पर कोई ऑर्डर नहीं है।');
+                return;
+            }
+
+            const normalizedItems = items.map(item => ({
+                item_name: String(item.name || ''),
+                category: String(item.category || item.cat || 'General'),
+                price: Number(item.price),
+                qty: Number(item.qty),
+                total_price: Number(item.price) * Number(item.qty)
+            }));
+
+            if (normalizedItems.some(item =>
+                !item.item_name || !Number.isFinite(item.price) || item.price < 0 ||
+                !Number.isInteger(item.qty) || item.qty <= 0
+            )) {
+                alert('ऑर्डर में नाम, कीमत या मात्रा अमान्य है। बिल सुरक्षित रखने के लिए सेटलमेंट रोका गया।');
+                return;
+            }
+
+            if (!pendingSettlementBillNos[tableNo]) {
+                pendingSettlementBillNos[tableNo] = 'WEB-' + loggedSession.storeCode + '-' + tableNo + '-' + Date.now();
+            }
+            const billNo = pendingSettlementBillNos[tableNo];
+            const subtotal = normalizedItems.reduce((sum, item) => sum + item.total_price, 0);
+            isSettlingBill = true;
+            const button = document.getElementById('btnSettleBill');
+            if (button) {
+                button.disabled = true;
+                button.textContent = 'सेव हो रहा है…';
+            }
+
+            try {
+                const response = await fetch(SUPABASE_URL + '/rest/v1/rpc/settle_hotel_order', {
+                    method: 'POST',
+                    headers: apiHeaders,
+                    body: JSON.stringify({
+                        p_invoice: {
+                            store_code: loggedSession.storeCode,
+                            bill_no: billNo,
+                            table_no: tableNo,
+                            waiter_id: 'WEB_POS',
+                            cashier_partner_id: loggedSession.staffId || null,
+                            cashier_partner_name: loggedSession.name || 'Web POS',
+                            subtotal: subtotal,
+                            discount_pct: 0,
+                            discount_amt: 0,
+                            final_amount: subtotal,
+                            payment_mode: 'CASH',
+                            created_at: new Date().toISOString()
+                        },
+                        p_items: normalizedItems,
+                        p_source: 'Table T-' + tableNo,
+                        p_partner_name: loggedSession.name || 'Web POS',
+                        p_partner_id: loggedSession.staffId || ''
+                    })
+                });
+
+                const responseText = await response.text();
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status + ': ' + responseText.slice(0, 240));
+                }
+
+                let result = {};
+                try { result = responseText ? JSON.parse(responseText) : {}; } catch (_) {}
+                if (!result.invoice_id) {
+                    throw new Error('डेटाबेस ने बिल नंबर की पुष्टि नहीं की।');
+                }
+
+                delete activeOrders[tableNo];
+                delete tableStatus[tableNo];
+                delete pendingSettlementBillNos[tableNo];
+                closeModal();
+                renderTables();
+                alert('टेबल T-' + tableNo + ' का बिल ' + billNo + ' सफलतापूर्वक सेव हुआ। कुल: ₹' + subtotal.toFixed(2));
+            } catch (error) {
+                console.error('Web POS settlement failed:', error);
+                alert('बिल सेव नहीं हुआ; ऑर्डर स्क्रीन पर सुरक्षित रखा है। दोबारा कोशिश करें.\n' + (error.message || error));
+            } finally {
+                isSettlingBill = false;
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = 'बिल सेटल करें';
+                }
+            }
+        }
         function closeModal() { document.getElementById('orderModal').style.display = 'none'; }
 
         // --- मेन्यू प्रबंधन ---
