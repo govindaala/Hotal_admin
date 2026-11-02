@@ -592,6 +592,26 @@
             } catch (err) { showMessage("डिलीट एरर: " + err.message, true); }
         }
 
+        // Supabase REST normally returns at most 1,000 rows per request; fetch every page.
+        async function fetchAllRows(url) {
+            const rows = [];
+            const pageSize = 1000;
+            for (let offset = 0; ; offset += pageSize) {
+                const response = await fetch(url, {
+                    headers: { ...apiHeaders, Range: `${offset}-${offset + pageSize - 1}` }
+                });
+                if (!response.ok) {
+                    const detail = await response.text();
+                    throw new Error(`डेटाबेस अनुरोध विफल (${response.status}): ${detail}`);
+                }
+                const page = await response.json();
+                if (!Array.isArray(page)) throw new Error('डेटाबेस ने सूची के बजाय गलत डेटा लौटाया।');
+                rows.push(...page);
+                if (page.length < pageSize) break;
+            }
+            return rows;
+        }
+
         // ================= 3. इनवॉइस व सेल्स एनालिटिक्स =================
         async function fetchProductWiseSales() {
             const hotel = document.getElementById('salesHotelFilter').value;
@@ -607,13 +627,16 @@
                 if (sDate) invoiceUrl += `&created_at=gte.${sDate}T00:00:00`;
                 if (eDate) invoiceUrl += `&created_at=lte.${eDate}T23:59:59`;
 
-                const [invoicesRes, itemsRes] = await Promise.all([
-                    fetch(invoiceUrl, { headers: apiHeaders }),
-                    fetch(`${SUPABASE_URL}/rest/v1/invoice_items?select=*`, { headers: apiHeaders })
-                ]);
-
-                const invoices = invoicesRes.ok ? await invoicesRes.json() : [];
-                const invoiceItems = itemsRes.ok ? await itemsRes.json() : [];
+                const invoices = await fetchAllRows(invoiceUrl);
+                const invoiceItems = [];
+                const invoiceIds = invoices.map(inv => inv.id).filter(id => id !== null && id !== undefined);
+                // Query only items belonging to the selected invoices; chunk IDs to keep URLs bounded.
+                for (let start = 0; start < invoiceIds.length; start += 100) {
+                    const chunk = invoiceIds.slice(start, start + 100);
+                    const inFilter = encodeURIComponent(`in.(${chunk.join(',')})`);
+                    const itemsUrl = `${SUPABASE_URL}/rest/v1/invoice_items?select=*&invoice_id=${inFilter}`;
+                    invoiceItems.push(...await fetchAllRows(itemsUrl));
+                }
 
                 let totalRevenue = 0;
                 let cashSales = 0;
@@ -638,7 +661,7 @@
                 const productMap = {};
 
                 invoiceItems.forEach(it => {
-                    if (validInvoiceIds.has(it.invoice_id) || invoices.length === 0) {
+                    if (validInvoiceIds.has(it.invoice_id)) {
                         const name = it.item_name || 'डिश';
                         const qty = Number(it.qty || 1);
                         const price = Number(it.price || 0);
