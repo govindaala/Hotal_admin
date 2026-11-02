@@ -531,11 +531,40 @@
             }
         }
 
-        function markTableFoodDone() {
-            tableStatus[currentSelectedTable] = 'bill_ready';
-            closeModal();
-            renderTables();
-            speakHindi(`टेबल ${currentSelectedTable} का खाना पूरा हो गया है, बिल तैयार है`);
+        async function markTableFoodDone() {
+            const tableNo = Number(currentSelectedTable);
+            if (!loggedSession || !loggedSession.storeCode || !Number.isInteger(tableNo)) {
+                alert('लॉगिन सत्र या टेबल नंबर सही नहीं है।');
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/hotel_kots?store_code=eq.${encodeURIComponent(loggedSession.storeCode)}&table_no=eq.${tableNo}&status=neq.settled`,
+                    {
+                        method: 'PATCH',
+                        headers: { ...apiHeaders, 'Prefer': 'return=representation' },
+                        body: JSON.stringify({ status: 'ready' })
+                    }
+                );
+                if (!response.ok) {
+                    const details = await response.text();
+                    throw new Error('HTTP ' + response.status + ': ' + details.slice(0, 200));
+                }
+
+                const updated = await response.json();
+                if (!Array.isArray(updated) || updated.length === 0) {
+                    throw new Error('इस टेबल के लिए कोई खुला KOT सर्वर पर नहीं मिला।');
+                }
+
+                tableStatus[tableNo] = 'bill_ready';
+                closeModal();
+                renderTables();
+                speakHindi(`टेबल ${tableNo} का खाना पूरा हो गया है, बिल तैयार है`);
+            } catch (error) {
+                console.error('Unable to mark table food ready:', error);
+                alert('खाना तैयार स्थिति सर्वर पर सेव नहीं हुई। टेबल की स्थिति नहीं बदली गई।\n' + (error.message || error));
+            }
         }
 
         let isSettlingBill = false;
