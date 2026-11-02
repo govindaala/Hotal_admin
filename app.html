@@ -589,7 +589,8 @@
             const recentData = data.filter(d => new Date(d.created_at) >= tenDaysAgo);
 
             div.innerHTML = recentData.map(d => {
-                const isReceived = d.quantity.includes('(आ गया)');
+                // Flutter app uses is_received as the shared status field.
+                const isReceived = d.is_received === true;
                 const dateStr = new Date(d.created_at).toLocaleDateString('hi-IN');
                 return `
                     <div class="ration-item ${isReceived ? 'ration-received' : ''}">
@@ -598,7 +599,7 @@
                                 <b>${d.item_name}</b> - ${d.quantity}
                                 <div style="font-size:11px; color:#64748b;">दिनांक: ${dateStr}</div>
                             </div>
-                            <button class="btn ${isReceived ? 'btn-green' : 'btn-orange'}" onclick="toggleRationReceived('${d.id}', '${d.quantity}')">
+                            <button class="btn ${isReceived ? 'btn-green' : 'btn-orange'}" onclick="toggleRationReceived('${d.id}', ${isReceived})">
                                 ${isReceived ? '✓ आ गया' : 'पेंडिंग'}
                             </button>
                         </div>
@@ -607,14 +608,18 @@
             }).join('');
         }
 
-        async function toggleRationReceived(id, currentQty) {
-            const newQty = currentQty.includes('(आ गया)') ? currentQty.replace(' (आ गया)', '') : currentQty + ' (आ गया)';
-            await fetch(`${SUPABASE_URL}/rest/v1/ration_demands?id=eq.${id}`, {
-                method: 'PATCH',
-                headers: apiHeaders,
-                body: JSON.stringify({ quantity: newQty })
-            });
-            loadMasterRationDemands();
+        async function toggleRationReceived(id, isReceived) {
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/ration_demands?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: apiHeaders,
+                    body: JSON.stringify({ is_received: !isReceived })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                await loadMasterRationDemands();
+            } catch (error) {
+                alert('रिसीव स्थिति अपडेट नहीं हुई। कृपया इंटरनेट/डेटाबेस जाँचें: ' + error.message);
+            }
         }
 
         setInterval(() => {
