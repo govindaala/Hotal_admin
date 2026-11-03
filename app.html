@@ -206,12 +206,10 @@
         let loggedSession = null;
         let totalTableCount = 10;
 
-        let hotelMenu = JSON.parse(localStorage.getItem('app_menu')) || [
-            { id: 1, name: 'दाल तड़का', price: 120, cat: 'सब्जी', available: true },
-            { id: 2, name: 'पनीर बटर मसाला', price: 180, cat: 'सब्जी', available: true },
-            { id: 3, name: 'तंदूरी रोटी', price: 12, cat: 'रोटी', available: true },
-            { id: 4, name: 'जीरा राइस', price: 100, cat: 'चावल', available: true }
-        ];
+        // होटल-विशिष्ट मेन्यू केवल Supabase से आएगा; साझा ब्राउज़र मेन्यू का उपयोग नहीं होगा।
+        let hotelMenu = [];
+        let menuLoaded = false;
+        let menuLoadError = '';
 
         let presetRations = JSON.parse(localStorage.getItem('app_rations')) || ['आटा', 'चावल', 'तेल', 'पनीर', 'शक्कर'];
         let activeOrders = {};
@@ -331,10 +329,12 @@
                 renderTables();
                 loadActiveTableOrders();
             });
-            renderMasterMenu();
-            renderPresetRations();
-            renderCookKOTs();
-            loadMasterRationDemands();
+            loadStoreMenu().finally(() => {
+                renderMasterMenu();
+                renderPresetRations();
+                renderCookKOTs();
+                loadMasterRationDemands();
+            });
         }
 
         // Load this hotel's configured table count; retain the database default of 10 if unavailable.
@@ -465,16 +465,20 @@
             }
 
             const menuDiv = document.getElementById('orderMenuSelection');
-            menuDiv.innerHTML = hotelMenu.map(m => `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f1f5f9;">
-                    <div><b>${m.name}</b> (₹${m.price})</div>
-                    <div>
-                        <button class="btn btn-red" onclick="changeQty(${m.id}, -1)">-</button>
-                        <span id="qty-${m.id}" style="font-weight:bold; margin: 0 8px;">0</span>
-                        <button class="btn btn-green" onclick="changeQty(${m.id}, 1)">+</button>
+            if (!menuLoaded) {
+                menuDiv.textContent = 'मेन्यू सर्वर से लोड नहीं हुआ; ऑर्डर जोड़ना अभी उपलब्ध नहीं है।';
+            } else {
+                menuDiv.innerHTML = hotelMenu.map(m => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+                        <div><b>${escapeMenuText(m.name)}</b> (₹${m.price})</div>
+                        <div>
+                            <button class="btn btn-red" onclick="changeQty('${String(m.id).replace(/'/g, "\\'")}', -1)">-</button>
+                            <span id="qty-${escapeMenuText(m.id)}" style="font-weight:bold; margin: 0 8px;">0</span>
+                            <button class="btn btn-green" onclick="changeQty('${String(m.id).replace(/'/g, "\\'")}', 1)">+</button>
                     </div>
                 </div>
             `).join('');
+            }
 
             document.getElementById('btnSendKOT').style.display = 'block';
             document.getElementById('btnDoneFood').style.display = (role === 'waiter' && existing.length > 0) ? 'block' : 'none';
@@ -689,37 +693,138 @@
         }
         function closeModal() { document.getElementById('orderModal').style.display = 'none'; }
 
-        // --- मेन्यू प्रबंधन ---
-        function openMenuModal() { document.getElementById('menuModal').style.display = 'block'; }
+        // --- होटल-विशिष्ट मेन्यू प्रबंधन (Supabase menu_items) ---
+        function openMenuModal() {
+            if (!loggedSession || loggedSession.role !== 'master') {
+                alert('मेन्यू बदलने के लिए मास्टर लॉगिन आवश्यक है।');
+                return;
+            }
+            document.getElementById('menuModal').style.display = 'block';
+        }
         function closeMenuModal() { document.getElementById('menuModal').style.display = 'none'; }
 
-        function saveNewMenuItem() {
-            const name = document.getElementById('mItemName').value.trim();
-            const price = parseFloat(document.getElementById('mItemPrice').value);
-            const cat = document.getElementById('mItemCat').value;
-            if (!name || isNaN(price)) return alert("कृपया नाम और कीमत सही भरें");
+        function escapeMenuText(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[ch]);
+        }
 
-            hotelMenu.push({ id: Date.now(), name, price, cat, available: true });
-            localStorage.setItem('app_menu', JSON.stringify(hotelMenu));
-            closeMenuModal();
-            renderMasterMenu();
+        async function loadStoreMenu() {
+            menuLoaded = false;
+            menuLoadError = '';
+            if (!loggedSession || !loggedSession.storeCode) return;
+            try {
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/menu_items?store_code=eq.${encodeURIComponent(loggedSession.storeCode)}&select=id,name,price,category,is_available&order=category.asc,name.asc`,
+                    { headers: apiHeaders }
+                );
+                if (!response.ok) {
+                    const details = await response.text();
+                    throw new Error('HTTP ' + response.status + ': ' + details.slice(0, 200));
+                }
+                const rows = await response.json();
+                if (!Array.isArray(rows)) throw new Error('सर्वर से मेन्यू सूची सही नहीं मिली');
+                hotelMenu = rows.map(item => ({
+                    id: item.id,
+                    name: String(item.name || '').trim(),
+                    price: Number(item.price),
+                    cat: String(item.category || 'अन्य'),
+                    available: item.is_available !== false
+                })).filter(item => item.name && Number.isFinite(item.price) && item.price >= 0 && item.available);
+                menuLoaded = true;
+            } catch (error) {
+                menuLoadError = error.message || String(error);
+                console.error('Hotel menu load failed:', error);
+                alert('इस होटल का मेन्यू सर्वर से लोड नहीं हुआ। स्थानीय/दूसरे होटल का मेन्यू इस्तेमाल नहीं किया जाएगा。\\n' + menuLoadError);
+            }
+        }
+
+        async function saveNewMenuItem() {
+            if (!loggedSession || loggedSession.role !== 'master' || !loggedSession.storeCode) {
+                alert('मेन्यू सेव करने के लिए मास्टर लॉगिन आवश्यक है।');
+                return;
+            }
+            const name = document.getElementById('mItemName').value.trim();
+            const price = Number(document.getElementById('mItemPrice').value);
+            const cat = document.getElementById('mItemCat').value;
+            if (!name || !Number.isFinite(price) || price < 0) {
+                alert('कृपया व्यंजन का नाम और शून्य या उससे अधिक सही कीमत भरें।');
+                return;
+            }
+            const button = document.querySelector('#menuModal .btn-green');
+            if (button) { button.disabled = true; button.textContent = 'सेव हो रहा है…'; }
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/menu_items`, {
+                    method: 'POST',
+                    headers: { ...apiHeaders, 'Prefer': 'return=representation' },
+                    body: JSON.stringify({
+                        store_code: loggedSession.storeCode,
+                        name,
+                        price,
+                        category: cat,
+                        is_available: true
+                    })
+                });
+                const responseText = await response.text();
+                if (!response.ok) throw new Error('HTTP ' + response.status + ': ' + responseText.slice(0, 200));
+                let rows = [];
+                try { rows = responseText ? JSON.parse(responseText) : []; } catch (_) {}
+                if (!Array.isArray(rows) || rows.length === 0) throw new Error('सर्वर ने सेव हुए व्यंजन की पुष्टि नहीं की।');
+                await loadStoreMenu();
+                if (!menuLoaded) throw new Error(menuLoadError || 'सेव किया गया मेन्यू दोबारा लोड नहीं हुआ।');
+                document.getElementById('mItemName').value = '';
+                document.getElementById('mItemPrice').value = '';
+                closeMenuModal();
+                renderMasterMenu();
+            } catch (error) {
+                alert('व्यंजन सर्वर पर सेव नहीं हुआ: ' + (error.message || error));
+            } finally {
+                if (button) { button.disabled = false; button.textContent = 'सेव करें'; }
+            }
         }
 
         function renderMasterMenu() {
             const list = document.getElementById('master-menu-list');
             if (!list) return;
-            list.innerHTML = hotelMenu.map((m, idx) => `
+            if (!menuLoaded) {
+                list.textContent = menuLoadError ? 'मेन्यू लोड नहीं हुआ। इंटरनेट/डेटाबेस जाँचें।' : 'मेन्यू लोड हो रहा है…';
+                return;
+            }
+            if (hotelMenu.length === 0) {
+                list.textContent = 'इस होटल के मेन्यू में अभी कोई उपलब्ध व्यंजन नहीं है। “नया व्यंजन जोड़ें” से जोड़ें।';
+                return;
+            }
+            list.innerHTML = hotelMenu.map((item, idx) => `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9;">
-                    <div><b>${m.name}</b> (${m.cat}) - ₹${m.price}</div>
+                    <div><b>${escapeMenuText(item.name)}</b> (${escapeMenuText(item.cat)}) - ₹${item.price}</div>
                     <button class="btn btn-red" onclick="deleteMenuItem(${idx})">🗑️</button>
                 </div>
             `).join('');
         }
 
-        function deleteMenuItem(idx) {
-            hotelMenu.splice(idx, 1);
-            localStorage.setItem('app_menu', JSON.stringify(hotelMenu));
-            renderMasterMenu();
+        async function deleteMenuItem(idx) {
+            const item = hotelMenu[idx];
+            if (!item || !loggedSession || loggedSession.role !== 'master' || !loggedSession.storeCode) return;
+            if (!confirm('“' + item.name + '” को इस होटल के उपलब्ध मेन्यू से हटाएँ? पुराने बिल/KOT रिकॉर्ड सुरक्षित रहेंगे।')) return;
+            try {
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/menu_items?id=eq.${encodeURIComponent(item.id)}&store_code=eq.${encodeURIComponent(loggedSession.storeCode)}`,
+                    {
+                        method: 'PATCH',
+                        headers: { ...apiHeaders, 'Prefer': 'return=representation' },
+                        body: JSON.stringify({ is_available: false })
+                    }
+                );
+                const responseText = await response.text();
+                if (!response.ok) throw new Error('HTTP ' + response.status + ': ' + responseText.slice(0, 200));
+                let rows = [];
+                try { rows = responseText ? JSON.parse(responseText) : []; } catch (_) {}
+                if (!Array.isArray(rows) || rows.length === 0) throw new Error('व्यंजन नहीं बदला; सर्वर ने किसी रिकॉर्ड की पुष्टि नहीं की।');
+                await loadStoreMenu();
+                renderMasterMenu();
+            } catch (error) {
+                alert('व्यंजन हटाया नहीं गया: ' + (error.message || error));
+            }
         }
 
         // --- कुक KDS लॉजिक ---
