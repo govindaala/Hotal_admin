@@ -1,0 +1,5 @@
+# Repository path: supabase/config.toml
+[functions.pos-pin-login]
+# This endpoint must accept unauthenticated PIN login requests.
+# The function validates the PIN and rate-limits attempts before issuing an Auth session.
+verify_jwt = false
