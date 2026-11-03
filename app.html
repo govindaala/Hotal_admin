@@ -467,15 +467,14 @@
             const menuDiv = document.getElementById('orderMenuSelection');
             if (!menuLoaded) {
                 menuDiv.textContent = 'मेन्यू सर्वर से लोड नहीं हुआ; ऑर्डर जोड़ना अभी उपलब्ध नहीं है।';
-                return;
-            }
-            menuDiv.innerHTML = hotelMenu.map(m => `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f1f5f9;">
-                    <div><b>${escapeMenuText(m.name)}</b> (₹${m.price})</div>
-                    <div>
-                        <button class="btn btn-red" onclick="changeQty('${String(m.id).replace(/'/g, "\\'")}', -1)">-</button>
-                        <span id="qty-${escapeMenuText(m.id)}" style="font-weight:bold; margin: 0 8px;">0</span>
-                        <button class="btn btn-green" onclick="changeQty('${String(m.id).replace(/'/g, "\\'")}', 1)">+</button>
+            } else {
+                menuDiv.innerHTML = hotelMenu.map(m => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+                        <div><b>${escapeMenuText(m.name)}</b> (₹${m.price})</div>
+                        <div>
+                            <button class="btn btn-red" onclick="changeQty('${String(m.id).replace(/'/g, "\\'")}', -1)">-</button>
+                            <span id="qty-${escapeMenuText(m.id)}" style="font-weight:bold; margin: 0 8px;">0</span>
+                            <button class="btn btn-green" onclick="changeQty('${String(m.id).replace(/'/g, "\\'")}', 1)">+</button>
                     </div>
                 </div>
             `).join('');
