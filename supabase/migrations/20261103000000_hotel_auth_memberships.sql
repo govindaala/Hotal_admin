@@ -62,7 +62,7 @@ returns boolean
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $function$
 declare
     current_attempts integer;
 begin
@@ -86,7 +86,7 @@ begin
 
     return current_attempts <= 8;
 end;
-$;
+$function$;
 
 revoke all on function public.pos_login_rate_limit(text, boolean) from public, anon, authenticated;
 grant execute on function public.pos_login_rate_limit(text, boolean) to service_role;
