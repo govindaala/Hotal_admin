@@ -88,3 +88,14 @@ The Edge Function requires `POS_AUTH_IDENTITY_SECRET` to be configured before it
 - The live Edge Function listing returned no deployed functions.
 - No production database migration or policy change has been applied as part of this work.
 - No production Android/POS client has been identified or modified.
+
+## Additional authentication blockers found during schema verification
+
+- `public.restaurants.master_pin` has a database default of `9999`. A production rollout must identify and replace any default/weak master PINs before enabling PIN-based Auth.
+- `public.restaurants` includes `is_active`; the current login function must reject inactive hotels.
+- `public.hotel_staff` has no `is_active` column. The current login function cannot support immediate staff deactivation until the data model and account lifecycle are extended.
+- `public.restaurant_partners` is a separate login identity model with `login_pin` and `is_active`. The current draft login function supports only master, waiter, and cook; partner authentication remains unspecified and must not be silently treated as a staff role.
+- The schema contains mixed hotel ownership keys (`restaurant_id` UUID in some tables, `store_code` text in others, and parent-linked child tables). A blanket policy template would be unsafe; policies must be written and tested table by table.
+- Schema listing reported one row in `restaurant_partners`. Row-count summaries for other tables are not evidence that production tables are empty.
+
+These items are blockers for production deployment of the current draft login function.
