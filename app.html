@@ -204,6 +204,7 @@
 
         let currentRole = null;
         let loggedSession = null;
+        let totalTableCount = 10;
 
         let hotelMenu = JSON.parse(localStorage.getItem('app_menu')) || [
             { id: 1, name: 'दाल तड़का', price: 120, cat: 'सब्जी', available: true },
@@ -326,12 +327,33 @@
                 document.getElementById('screen-cook').classList.add('active');
             }
 
-            renderTables();
-            loadActiveTableOrders();
+            loadStoreTableCount().finally(() => {
+                renderTables();
+                loadActiveTableOrders();
+            });
             renderMasterMenu();
             renderPresetRations();
             renderCookKOTs();
             loadMasterRationDemands();
+        }
+
+        // Load this hotel's configured table count; retain the database default of 10 if unavailable.
+        async function loadStoreTableCount() {
+            if (!loggedSession || !loggedSession.storeCode) return;
+            try {
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/restaurants?store_code=eq.${encodeURIComponent(loggedSession.storeCode)}&is_active=eq.true&select=total_tables&limit=1`,
+                    { headers: apiHeaders }
+                );
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const rows = await response.json();
+                const configuredCount = Number(rows?.[0]?.total_tables);
+                if (Number.isInteger(configuredCount) && configuredCount >= 1 && configuredCount <= 200) {
+                    totalTableCount = configuredCount;
+                }
+            } catch (error) {
+                console.warn('Could not load configured table count; using 10 tables.', error);
+            }
         }
 
         // Reload unsettled KOTs so open bills survive a browser refresh.
@@ -353,7 +375,7 @@
                 const restoredStatuses = {};
                 for (const kot of rows) {
                     const tableNo = Number(kot.table_no);
-                    if (!Number.isInteger(tableNo) || tableNo < 1 || tableNo > 10) continue;
+                    if (!Number.isInteger(tableNo) || tableNo < 1 || tableNo > totalTableCount) continue;
                     let items;
                     try {
                         items = Array.isArray(kot.items) ? kot.items : JSON.parse(kot.items || '[]');
@@ -397,7 +419,7 @@
             if (masterGrid) masterGrid.innerHTML = '';
             if (waiterGrid) waiterGrid.innerHTML = '';
 
-            for (let i = 1; i <= 10; i++) {
+            for (let i = 1; i <= totalTableCount; i++) {
                 const status = tableStatus[i] || 'empty';
                 let cls = 'tbl-empty';
                 let txt = 'खाली';
