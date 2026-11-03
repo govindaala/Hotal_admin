@@ -121,6 +121,13 @@ Deno.serve(async (req) => {
     if (rateError) return json({ error: "Login service temporarily unavailable" }, 503);
     if (allowed !== true) return json({ error: "बहुत अधिक प्रयास हुए हैं। 15 मिनट बाद पुनः प्रयास करें।" }, 429);
 
+    // Refuse known factory PINs. They must be changed before an account can use
+    // the new Auth-backed login path.
+    const factoryPin = resolvedRole === "master" ? "9999" : resolvedRole === "partner" ? "0000" : "";
+    if (factoryPin && storedPin === factoryPin) {
+      return json({ error: "पहले डिफॉल्ट PIN बदलें, फिर लॉगिन करें।" }, 403);
+    }
+
     if (!storedPin || !constantTimeEqual(storedPin, pin)) {
       return json({ error: "लॉगिन विवरण गलत हैं" }, 401);
     }
