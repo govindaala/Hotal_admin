@@ -55,12 +55,12 @@ Deno.serve(async (req) => {
   }
 
   const storeCode = typeof input.storeCode === "string" ? input.storeCode.trim() : "";
-  const role = input.role;
+  const role = typeof input.role === "string" ? input.role : "";
   const pin = typeof input.pin === "string" ? input.pin : String(input.pin ?? "");
   const staffId = typeof input.staffId === "string" ? input.staffId.trim() : "";
 
   if (!storeCode || storeCode.length > 80 || pin.length < 1 || pin.length > 32 ||
-      !["master", "waiter", "cook"].includes(String(role)) ||
+      !["master", "waiter", "cook"].includes(role) ||
       (role !== "master" && (!staffId || staffId.length > 100))) {
     return json({ error: "लॉगिन विवरण सही नहीं हैं" }, 400);
   }
