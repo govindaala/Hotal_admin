@@ -8,7 +8,7 @@ create table if not exists public.hotel_memberships (
     id uuid primary key default gen_random_uuid(),
     auth_user_id uuid not null references auth.users(id) on delete cascade,
     restaurant_id uuid not null references public.restaurants(id) on delete cascade,
-    role text not null check (role in ('master', 'waiter', 'cook')),
+    role text not null check (role in ('master', 'waiter', 'cook', 'partner')),
     is_active boolean not null default true,
     created_by uuid references auth.users(id) on delete set null,
     created_at timestamptz not null default now(),
