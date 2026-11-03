@@ -544,7 +544,7 @@
                     {
                         method: 'PATCH',
                         headers: { ...apiHeaders, 'Prefer': 'return=representation' },
-                        body: JSON.stringify({ status: 'ready' })
+                        body: JSON.stringify({ status: 'ready', ready_at: new Date().toISOString() })
                     }
                 );
                 if (!response.ok) {
