@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     return json({ error: "Login service is not configured" }, 503);
   }
 
-  let input: { storeCode?: unknown; role?: unknown; staffId?: unknown; pin?: unknown };
+  let input: { storeCode?: unknown; role?: unknown; staffId?: unknown; partnerId?: unknown; pin?: unknown };
   try {
     input = await req.json();
   } catch {
@@ -58,10 +58,12 @@ Deno.serve(async (req) => {
   const role = typeof input.role === "string" ? input.role : "";
   const pin = typeof input.pin === "string" ? input.pin : String(input.pin ?? "");
   const staffId = typeof input.staffId === "string" ? input.staffId.trim() : "";
+  const partnerId = typeof input.partnerId === "string" ? input.partnerId.trim() : "";
 
   if (!storeCode || storeCode.length > 80 || pin.length < 1 || pin.length > 32 ||
-      !["master", "waiter", "cook"].includes(role) ||
-      (role !== "master" && (!staffId || staffId.length > 100))) {
+      !["master", "waiter", "cook", "partner"].includes(role) ||
+      (["waiter", "cook"].includes(role) && (!staffId || staffId.length > 100)) ||
+      (role === "partner" && (!partnerId || partnerId.length > 100))) {
     return json({ error: "लॉगिन विवरण सही नहीं हैं" }, 400);
   }
 
@@ -71,17 +73,31 @@ Deno.serve(async (req) => {
   try {
     const { data: restaurant, error: restaurantError } = await admin
       .from("restaurants")
-      .select("id, store_code, name, master_pin")
+      .select("id, store_code, name, master_pin, is_active")
       .eq("store_code", storeCode)
       .maybeSingle();
-    if (restaurantError || !restaurant) return json({ error: "लॉगिन विवरण गलत हैं" }, 401);
+    if (restaurantError || !restaurant || restaurant.is_active !== true) return json({ error: "लॉगिन विवरण गलत हैं" }, 401);
 
     let accountId = restaurant.id as string;
     let storedPin: string;
-    let resolvedRole: "master" | "waiter" | "cook";
+    let resolvedRole: "master" | "waiter" | "cook" | "partner";
     if (role === "master") {
       storedPin = String(restaurant.master_pin ?? "");
       resolvedRole = "master";
+    } else if (role === "partner") {
+      const { data: partner, error: partnerError } = await admin
+        .from("restaurant_partners")
+        .select("id, partner_id, login_pin, is_active")
+        .eq("store_code", storeCode)
+        .eq("partner_id", partnerId)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (partnerError || !partner || partner.is_active !== true) {
+        return json({ error: "लॉगिन विवरण गलत हैं" }, 401);
+      }
+      accountId = partner.id as string;
+      storedPin = String(partner.login_pin ?? "");
+      resolvedRole = "partner";
     } else {
       const { data: staff, error: staffError } = await admin
         .from("hotel_staff")
@@ -93,7 +109,7 @@ Deno.serve(async (req) => {
       if (staffError || !staff) return json({ error: "लॉगिन विवरण गलत हैं" }, 401);
       accountId = staff.id as string;
       storedPin = String(staff.pin ?? "");
-      resolvedRole = role;
+      resolvedRole = role as "waiter" | "cook";
     }
 
     const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
@@ -150,7 +166,7 @@ Deno.serve(async (req) => {
         role: resolvedRole,
         storeCode: restaurant.store_code,
         hotelName: restaurant.name,
-        ...(resolvedRole === "master" ? {} : { staffId }),
+        ...(resolvedRole === "master" ? {} : resolvedRole === "partner" ? { partnerId } : { staffId }),
       },
     });
   } catch (_error) {
