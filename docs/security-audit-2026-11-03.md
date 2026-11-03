@@ -99,3 +99,22 @@ The Edge Function requires `POS_AUTH_IDENTITY_SECRET` to be configured before it
 - Schema listing reported one row in `restaurant_partners`. Row-count summaries for other tables are not evidence that production tables are empty.
 
 These items are blockers for production deployment of the current draft login function.
+
+## Follow-up implementation update — 2026-11-03
+
+The draft branch now includes the following additional changes:
+
+- Hotel membership role constraint includes `partner`.
+- PIN login accepts a partner identity using `restaurant_partners.partner_id` and `login_pin`, and requires `is_active = true`.
+- PIN login rejects inactive hotels by checking `restaurants.is_active`.
+- PIN login blocks the known factory PINs `9999` for master and `0000` for partner accounts. Those credentials must be changed before using this new login path.
+
+These changes are code-only in the draft PR. They have not been applied to the live database or deployed.
+
+Remaining blockers:
+- Staff records still have no active/deactivation field; the current staff lookup cannot revoke a staff account using an active flag.
+- Existing PINs are stored as plaintext in the current schema; a safe migration to password hashing/rotation is still needed.
+- Hotel-scoped RLS policies for operational tables are not yet implemented.
+- The actual Android/POS client is still unidentified, so the login request/response contract has not been integrated or tested.
+- `POS_AUTH_IDENTITY_SECRET` must be securely configured before deployment. Changing it later changes the deterministic internal Auth passwords and requires a planned account/session migration.
+- No end-to-end or live deployment test has been performed.
